@@ -9,6 +9,7 @@ RELEASE="$(rpm -E %fedora)"
 
 # flatpak related items
 # add the fedora registry 
+mkdir -p /flatpak/flatpak /flatpak/triggers
 flatpak update -y
 flatpak remote-add --if-not-exists fedora oci+https://registry.fedoraproject.org
 
