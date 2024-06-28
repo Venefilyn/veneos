@@ -1,6 +1,3 @@
-ENV MY_IMAGE_NAME=venos
-ENV MY_IMAGE_DESC=Custom Bazzite OS built for Venefilyn
-
 ## 1. BUILD ARGS
 # These allow changing the produced image by passing different build args to adjust
 # the source from which your image is built.
