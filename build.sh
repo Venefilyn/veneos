@@ -13,7 +13,7 @@ flatpak remote-add --system --if-not-exists fedora oci+https://registry.fedorapr
 
 # Bazzite installs Firefox from flathub, we need it from Fedora registry
 # to make it work with Kerberos
-flatpak uninstall --verbose --system -y app/org.mozilla.firefox/x86_64/stable
+flatpak uninstall --verbose -y org.mozilla.firefox
 flatpak install --verbose --system -y fedora app/org.mozilla.firefox/x86_64/stable runtime/org.fedoraproject.Platform/x86_64/f${RELEASE}
 
 # Packages can be installed from any enabled yum repo on the image.
