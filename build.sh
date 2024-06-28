@@ -9,12 +9,11 @@ RELEASE="$(rpm -E %fedora)"
 
 # flatpak related items
 # add the fedora registry 
-flatpak update --verbose -y
-flatpak remote-add --verbose --if-not-exists fedora oci+https://registry.fedoraproject.org
+flatpak remote-add --system --if-not-exists fedora oci+https://registry.fedoraproject.org
 
 # Bazzite installs Firefox from flathub, we need it from Fedora registry
 # to make it work with Kerberos
-flatpak install --verbose --reinstall -y fedora org.mozilla.firefox
+flatpak install --system --reinstall -y fedora org.mozilla.firefox
 
 # Packages can be installed from any enabled yum repo on the image.
 # RPMfusion repos are available by default in ublue main images
