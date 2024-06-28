@@ -21,6 +21,7 @@ rpm-ostree install podman-compose podman-remote krb5-workstation libva-utils lib
 # flatpak related items
 # add the fedora registry 
 flatpak remote-add --if-not-exists fedora oci+https://registry.fedoraproject.org
+flatpak update -y
 
 # Bazzite installs Firefox from flathub, we need it from Fedora registry
 # to make it work with Kerberos
