@@ -19,7 +19,7 @@ rpm-ostree install podman-compose podman-remote krb5-workstation libva-utils lib
 # rpm-ostree install vlc
 
 # Install nix through Nix Determinate Installer
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm
+#curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm
 
 #### Example for enabling a System Unit File
 systemctl enable podman.socket
