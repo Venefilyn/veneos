@@ -13,7 +13,7 @@ RELEASE="$(rpm -E %fedora)"
 # https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/40/x86_64/repoview/index.html&protocol=https&redirect=1
 
 # this installs a package from fedora repos
-rpm-ostree install podman-compose podman-remote krb5-workstation libva-utils libvirt vagrant lld rustup
+rpm-ostree install podman-compose podman-remote krb5-workstation libva-utils libvirt vagrant
 
 # this would install a package from rpmfusion
 # rpm-ostree install vlc
