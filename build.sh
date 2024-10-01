@@ -15,6 +15,9 @@ RELEASE="$(rpm -E %fedora)"
 # this installs a package from fedora repos
 rpm-ostree install podman-compose podman-remote krb5-workstation libva-utils libvirt vagrant
 
+# I use flatpak steam with some addons instead
+rpm-ostree override remove steam
+
 # this would install a package from rpmfusion
 # rpm-ostree install vlc
 
