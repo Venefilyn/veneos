@@ -2,9 +2,6 @@
 
 set -ouex pipefail
 
-RELEASE="$(rpm -E %fedora)"
-
-
 ### Install packages
 
 # Packages can be installed from any enabled yum repo on the image.
@@ -13,13 +10,20 @@ RELEASE="$(rpm -E %fedora)"
 # https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/40/x86_64/repoview/index.html&protocol=https&redirect=1
 
 # this installs a package from fedora repos
-rpm-ostree install podman-compose podman-remote krb5-workstation libva-utils libvirt vagrant
+dnf5 install -y podman-compose podman-remote krb5-workstation libva-utils libvirt vagrant
 
 # I use flatpak steam with some addons instead
-rpm-ostree override remove steam
+# rpm-ostree override remove steam
+dnf5 remove steam
 
 # this would install a package from rpmfusion
-# rpm-ostree install vlc
+# dnf5 install vlc
+
+# Copr stuff
+dnf5 -y copr enable pgdev/ghostty
+dnf5 -y install ghostty
+# Disable Copr repos so they don't end up enabled on the final image:
+dnf5 -y copr disable pgdev/ghostty
 
 # Install nix through Nix Determinate Installer
 #curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm
