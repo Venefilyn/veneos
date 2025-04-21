@@ -1,2 +1,2 @@
-cosign.key
+*.key
 _build_*
