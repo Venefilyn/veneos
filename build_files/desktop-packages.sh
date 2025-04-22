@@ -54,6 +54,7 @@ LAYERED_PACKAGES+=(
     yq
     yubikey-manager
     zoxide
+    zsh
 )
 
 dnf5 install --setopt=install_weak_deps=False -y "${LAYERED_PACKAGES[@]}"
