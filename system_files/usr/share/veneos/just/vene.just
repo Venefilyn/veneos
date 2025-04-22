@@ -77,7 +77,6 @@ vene-setup-git:
 
   git config --global core.excludesFile '~/.gitignore'
 
-
 # Setup VeneOS terminal configs
 [group('Setup')]
 vene-setup-cli:
@@ -85,14 +84,60 @@ vene-setup-cli:
   set -euo pipefail
 
   # Create config directories
-  mkdir -p "${HOME}/.bashrc.d" "${HOME}/.zshrc.d"
+  mkdir -p "${HOME}/.bashrc.d" \
+    "${HOME}/.zshrc.d" \
+    "${HOME}/.config/fish/completions" \
+    "${HOME}/.config/fish/conf.d" \
+    "${HOME}/.config/fish/functions"
 
-  echo "Adding bling to shells..."
-  echo '[ -f "/usr/share/veneos/bling/bling.sh" ] && . "/usr/share/veneos/bling/bling.sh"' | tee \
-    "${HOME}/.bashrc.d/bling.bashrc" \
-    "${HOME}/.zshrc.d/bling.zshrc" >/dev/null
+  echo "Shell configuration"
 
-  echo "Configure shell rc files"
+  echo "Adding aliases..."
+  echo '[ -f "/usr/share/veneos/bling/aliases.sh" ]; bass source /usr/share/veneos/bling/aliases.sh'| tee \
+    "${HOME}/.config/fish/conf.d/veneos-aliases.fish" >/dev/null
+
+  echo '[ -f "/usr/share/veneos/bling/aliases.sh" ] && . "/usr/share/veneos/bling/aliases.sh"'| tee \
+    "${HOME}/.bashrc.d/veneos-aliases.bashrc" \
+    "${HOME}/.zshrc.d/veneos-aliases.zshrc" >/dev/null
+
+  echo "Adding shell defaults..."
+  echo '[ -f "/usr/share/veneos/bling/defaults.fish" ]; bass source /usr/share/veneos/bling/defaults.fish'| tee \
+    "${HOME}/.config/fish/conf.d/veneos-defaults.fish" >/dev/null
+
+  echo '[ -f "/usr/share/veneos/bling/defaults.sh" ] && . "/usr/share/veneos/bling/defaults.sh"' | tee \
+    "${HOME}/.bashrc.d/veneos-defaults.bashrc" \
+    "${HOME}/.zshrc.d/veneos-defaults.zshrc" >/dev/null
+
+
+  echo "Adding fish plugins..."
+  wget -q https://github.com/edc/bass/raw/7296c6e70cf577a08a2a7d0e919e428509640e0f/functions/__bass.py -O "${HOME}/.config/fish/functions/__bass.py"
+  wget -q https://github.com/edc/bass/raw/7296c6e70cf577a08a2a7d0e919e428509640e0f/functions/bass.fish -O "${HOME}/.config/fish/functions/bass.fish"
+  wget -q https://github.com/garabik/grc/raw/4e1e9d7fdc9965c129f27d89c493d07f4b8307bb/grc.fish -O "${HOME}/.config/fish/conf.d/grc.fish"
+
+  echo "Setting up tools for fish"
+  echo "[ -f "${HOME}/.cargo/env.fish" ] && source \"${HOME}/.cargo/env.fish\"" | tee \
+    "${HOME}/.config/fish/conf.d/cargo-env.fish" >/dev/null
+
+  ATUIN_INIT_FLAGS=${ATUIN_INIT_FLAGS:-"--disable-up-arrow"}
+  for tool in starship atuin zoxide thefuck direnv; do
+    command -v "$tool" >/dev/null && {
+      case "$tool" in
+      atuin)
+        $tool init fish $ATUIN_INIT_FLAGS > "${HOME}/.config/fish/conf.d/${tool}.fish"
+        ;;
+      starship | zoxide)
+        $tool init fish > "${HOME}/.config/fish/conf.d/${tool}.fish"
+        ;;
+      thefuck)
+        $tool --alias > "${HOME}/.config/fish/conf.d/${tool}.fish"
+        ;;
+      direnv)
+        $tool hook fish > "${HOME}/.config/fish/conf.d/${tool}.fish"
+      esac
+    }
+  done
+
+  echo "Configure sh rc files"
   for shell in bash zsh; do
     echo ".. configuring $shell"
     rc_file="${HOME}/.${shell}rc"
