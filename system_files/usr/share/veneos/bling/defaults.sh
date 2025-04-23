@@ -21,15 +21,6 @@ bash)
 zsh)
   [ -f "/usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ] && . "/usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
   ;;
-fish)
-  set fish_greeting # Disable greeting
-  # Setup direnv hooks
-  command -v "direnv" >/dev/null; begin;
-      direnv hook fish | source
-  end;
-  # if cargo env file exists, source that too
-  [ -f "$HOME/.cargo/env.fish" ] && source "$HOME/.cargo/env.fish"
-  ;;
 esac
 
 # Start fish if we're in zsh

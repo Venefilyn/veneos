@@ -1,7 +1,7 @@
 # Setup editor in order of priority
 for cmd in nvim vim vi nano ;
   command -v "$cmd" >/dev/null; begin;
-    set -gx EDITOR=$cmd
+    set -gx EDITOR $cmd
     break
   end;
 end;
