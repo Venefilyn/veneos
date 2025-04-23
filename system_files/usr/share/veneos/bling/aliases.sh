@@ -2,10 +2,9 @@
 
 # sh for zsh and bash
 
-# Determine shell and prevent double-sourcing
-[ -z "$BASH_VERSION" ] && [ -z "$ZSH_VERSION" ] && [ -z "$FISH_VERSION" ] && return
-[ -n "$BASH_VERSION" ] && shell="bash" && [ "${BASH_BLING_SOURCED:-0}" -eq 1 ] && return || BASH_BLING_SOURCED=1
-[ -n "$ZSH_VERSION" ] && shell="zsh" && [ "${ZSH_BLING_SOURCED:-0}" -eq 1 ] && return || ZSH_BLING_SOURCED=1
+# Determine shell
+[ -n "$BASH_VERSION" ] && shell="bash"
+[ -n "$ZSH_VERSION" ] && shell="zsh"
 
 # Setup aliases if commands exist
 for cmd in eza bat gio ; do
