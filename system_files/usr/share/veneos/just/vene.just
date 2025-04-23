@@ -108,6 +108,11 @@ vene-setup-cli:
     "${HOME}/.bashrc.d/veneos-defaults.bashrc" \
     "${HOME}/.zshrc.d/veneos-defaults.zshrc" >/dev/null
 
+  echo "Adding plugins..."
+  echo '[ -f "/usr/share/veneos/bling/plugins.sh" ] && . "/usr/share/veneos/bling/plugins.sh"' | tee \
+    "${HOME}/.bashrc.d/veneos-plugins.bashrc" \
+    "${HOME}/.zshrc.d/veneos-plugins.zshrc" >/dev/null
+
 
   echo "Adding fish plugins..."
   wget -q https://github.com/edc/bass/raw/7296c6e70cf577a08a2a7d0e919e428509640e0f/functions/__bass.py -O "${HOME}/.config/fish/functions/__bass.py"
