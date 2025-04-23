@@ -101,7 +101,7 @@ vene-setup-cli:
     "${HOME}/.zshrc.d/veneos-aliases.zshrc" >/dev/null
 
   echo "Adding shell defaults..."
-  echo '[ -f "/usr/share/veneos/bling/defaults.fish" ]; bass source /usr/share/veneos/bling/defaults.fish'| tee \
+  echo '[ -f "/usr/share/veneos/bling/defaults.fish" ]; source /usr/share/veneos/bling/defaults.fish'| tee \
     "${HOME}/.config/fish/conf.d/veneos-defaults.fish" >/dev/null
 
   echo '[ -f "/usr/share/veneos/bling/defaults.sh" ] && . "/usr/share/veneos/bling/defaults.sh"' | tee \
