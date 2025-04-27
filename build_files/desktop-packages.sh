@@ -16,6 +16,7 @@ LAYERED_PACKAGES=(
     cockpit-sosreport
     fish
     ghostty
+    grc
     krb5-workstation
     libinput-devel
     libva-utils
