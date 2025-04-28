@@ -39,6 +39,8 @@ LAYERED_PACKAGES=(
     lld
     neovim
     nodejs
+    nodejs-npm
+    pnpm
     podman-compose
     podman-remote
     pre-commit
@@ -49,6 +51,7 @@ LAYERED_PACKAGES=(
     starship
     thefuck
     virt-install
+    yarnpkg
     yq
     yubikey-manager
     zoxide
