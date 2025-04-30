@@ -134,7 +134,7 @@ vene-setup-cli:
         $tool init fish > "${HOME}/.config/fish/conf.d/${tool}.fish"
         ;;
       thefuck)
-        $tool --alias > "${HOME}/.config/fish/conf.d/${tool}.fish"
+        $tool --alias > "${HOME}/.config/fish/functions/${tool}.fish"
         ;;
       direnv)
         $tool hook fish > "${HOME}/.config/fish/conf.d/${tool}.fish"
