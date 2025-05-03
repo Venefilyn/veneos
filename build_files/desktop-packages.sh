@@ -2,10 +2,24 @@
 
 set ${SET_X:+-x} -eou pipefail
 
+trap '[[ $BASH_COMMAND != echo* ]] && [[ $BASH_COMMAND != log* ]] && echo "+ $BASH_COMMAND"' DEBUG
+
+log() {
+  echo "=== $* ==="
+}
+
+log "Enable Copr repos"
+
 COPR_REPOS=(
     pgdev/ghostty
 )
 dnf5 -y copr enable "${COPR_REPOS[@]}"
+
+log "Enable repositories"
+# Bazzite disabled this for some reason so lets re-enable it again
+dnf5 config-manager setopt terra.enabled=1 terra-extras.enabled=1
+
+log "Install layered applications"
 
 # Layered Applications
 LAYERED_PACKAGES=(
@@ -57,14 +71,14 @@ LAYERED_PACKAGES=(
     zoxide
     zsh
 )
-
-
 dnf5 install --setopt=install_weak_deps=False -y "${LAYERED_PACKAGES[@]}"
 
+log "Disable Copr repos as we do not need it anymore"
 dnf5 -y copr disable "${COPR_REPOS[@]}"
 
 # Use flatpak steam with some addons instead
 # rpm-ostree override remove steam
+log "Removing Steam from Bazzite install, please use flatpak instead"
 dnf5 -y remove steam
 
 # Call other Scripts
