@@ -1,5 +1,6 @@
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/veneos)](https://artifacthub.io/packages/container/veneos/veneos)
 [![Build VeneOS](https://github.com/Venefilyn/veneos/actions/workflows/build.yml/badge.svg)](https://github.com/Venefilyn/veneos/actions/workflows/build.yml)
+[![Build VeneOS ISO](https://github.com/Venefilyn/veneos/actions/workflows/build-iso.yml/badge.svg)](https://github.com/Venefilyn/veneos/actions/workflows/build-iso.yml)
 
 # VeneOS - Venefilyn OS
 

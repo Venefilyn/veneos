@@ -1,5 +1,5 @@
 ---
-name: Build ISOs
+name: Build VeneOS ISO
 
 on:
   workflow_dispatch:
@@ -19,9 +19,9 @@ on:
     branches:
       - main
     paths:
-      - './iso.toml'
-      - './.github/workflows/build-iso.yml'
-      - './Justfile'
+      - "./iso.toml"
+      - "./.github/workflows/build-iso.yml"
+      - "./Justfile"
 
 env:
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository }}"

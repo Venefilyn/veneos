@@ -1,5 +1,5 @@
 ---
-name: Build Custom Image
+name: Build VeneOS image
 on:
   pull_request:
     branches:
