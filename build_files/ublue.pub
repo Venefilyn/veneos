@@ -1,3 +1,4 @@
-[0] Downloading 'https://raw.githubusercontent.com/ublue-os/main/main/cosign.pub' ...
-Saving 'cosign.pub.1'
-HTTP response 200  [https://raw.githubusercontent.com/ublue-os/main/main/cosign.pub]
+-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHLRpBfPRYiMl9wb7s6fx47PzzNWu
+3zyJgXhWEvxoOgwv9CpwjbvUwR9qHxNMWkJhuGE6cjDA2hpy1I6NbA+24Q==
+-----END PUBLIC KEY-----
