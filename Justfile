@@ -329,3 +329,7 @@ lint:
 # Runs shfmt on all Bash scripts
 format:
     /usr/bin/find . -iname "*.sh" -type f -exec shfmt --write "{}" ';'
+
+# Runs shfmt on all Bash scripts
+update-flatpaks:
+    flatpak list --columns application --app > ./repo_files/flatpaks

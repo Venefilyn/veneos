@@ -40,6 +40,7 @@ io.gitlab.librewolf-community
 io.missioncenter.MissionCenter
 io.neovim.nvim
 io.podman_desktop.PodmanDesktop
+it.mijorus.gearlever
 moe.launcher.the-honkers-railway-launcher
 net.cozic.joplin_desktop
 net.davidotek.pupgui2
@@ -51,6 +52,7 @@ org.cryptomator.Cryptomator
 org.darktable.Darktable
 org.fedoraproject.MediaWriter
 org.filezillaproject.Filezilla
+org.flathub.flatpak-external-data-checker
 org.gajim.Gajim
 org.gimp.GIMP
 org.gnome.Boxes
