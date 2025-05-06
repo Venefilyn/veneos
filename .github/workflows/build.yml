@@ -36,8 +36,12 @@ jobs:
 
     steps:
       # These stage versions are pinned by https://github.com/renovatebot/renovate
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Install ORAS
+        id: install_oras
+        uses: oras-project/setup-oras@8d34698a59f5ffe24821f0b48ab62a3de8b64b20 # v1.2.3
 
       - name: Get current date
         id: date
@@ -118,6 +122,21 @@ jobs:
         uses: ASzc/change-string-case-action@d0603cd0a7dd490be678164909f65c7737470a7f # v6
         with:
           string: ${{ env.IMAGE_NAME }}
+
+      - name: Login to GitHub Container Registry (ORAS)
+        id: oras_ghcr_login
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | oras login ghcr.io --username ${{ github.actor }} --password-stdin
+
+      - name: Publish Artifact Hub Manifest
+        id: publish_ah_manifest
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: |
+          oras push \
+            ghcr.io/${{ steps.registry_case.outputs.lowercase }}/${{ steps.image_case.outputs.lowercase }}:artifacthub.io \
+            --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+            artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
