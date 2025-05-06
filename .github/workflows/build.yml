@@ -77,6 +77,7 @@ jobs:
             io.artifacthub.package.license=Apache-2.0
             io.artifacthub.package.logo-url=${{ env.ARTIFACTHUB_LOGO_URL }}
             io.artifacthub.package.prerelease=false
+            io.artifacthub.package.maintainers=[{"name":"Freya Gustavsson","email":"freya@venefilyn.se"}]'
             containers.bootc=1
           sep-tags: " "
           sep-annotations: " "
