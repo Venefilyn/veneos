@@ -182,3 +182,18 @@ vene-setup-cli:
 #     cp -f "/etc/skel/.config/${editor}/User/settings.json" "$config_dir/settings.json"
 #     echo "$editor setup complete."
 #   done
+
+# Enable AMD GPU overclocking capability. This can then be changed in for example LACT.
+[group('Configure')]
+vene-enable-amdgpu-oc:
+  #!/usr/bin/env bash
+  set -euo pipefail
+
+  echo "Enabling AMD GPU overclocking"
+
+  if ! rpm-ostree kargs | grep -q "amdgpu.ppfeaturemask="; then
+    echo "Updating rpm-ostree kernel arguments"
+    sudo rpm-ostree kargs --append "amdgpu.ppfeaturemask=0xFFF7FFFF"
+  else
+    echo "Already enabled"
+  fi
