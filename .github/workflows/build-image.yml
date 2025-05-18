@@ -19,6 +19,7 @@ on:
         required: true
 
 env:
+  FEDORA_VERSION: 42 # The current Fedora Atomic version the non-CoreOS versions are using
   IMAGE_NAME: "${{ github.event.repository.name }}" # the name of the image produced by this build, matches repo names
   IMAGE_DESC: "${{ github.event.repository.description }}"
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}" # do not edit
@@ -89,7 +90,8 @@ jobs:
             type=raw,value=latest,enable=${{ matrix.variant == 'stable' }}
             type=raw,value=${{ matrix.variant }}
             type=raw,value=${{ matrix.variant }}.{{date 'YYYYMMDD'}}
-            type=raw,value={{date 'YYYYMMDD'}}
+            type=raw,value=${{ matrix.variant }}-${{ env.FEDORA_VERSION }}
+            type=raw,value=${{ matrix.variant }}-${{ env.FEDORA_VERSION }}.{{date 'YYYYMMDD'}}
             type=sha,enable=${{ github.event_name == 'pull_request' }}
             type=ref,event=pr
           labels: |
@@ -98,15 +100,15 @@ jobs:
             org.opencontainers.image.description=${{ env.IMAGE_DESC }}
             org.opencontainers.image.documentation=https://raw.githubusercontent.com/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}/refs/heads/main/README.md
             org.opencontainers.image.source=https://github.com/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}/blob/main/Containerfile
-            org.opencontainers.image.title=${{ env.IMAGE_NAME }}
+            org.opencontainers.image.title=${{ inputs.image_flavor }}
             org.opencontainers.image.url=https://github.com/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
             org.opencontainers.image.vendor=${{ github.repository_owner }}
-            org.opencontainers.image.version=${{ matrix.variant }}
+            org.opencontainers.image.version=${{ matrix.variant }}.{{date 'YYYYMMDD'}}
             io.artifacthub.package.deprecated=false
             io.artifacthub.package.keywords=bootc,ostree,ublue,universal-blue,veneos${{ inputs.image_flavor == 'veneos-server' && ',coreos,ucore' || ',bazzite' }}
             io.artifacthub.package.license=Apache-2.0
             io.artifacthub.package.logo-url=${{ env.ARTIFACTHUB_LOGO_URL }}
-            io.artifacthub.package.prerelease=${{ matrix.variant == 'testing' }}
+            io.artifacthub.package.prerelease=false
             io.artifacthub.package.maintainers=[{"name":"Freya Gustavsson","email":"freya@venefilyn.se"}]
             containers.bootc=1
           sep-tags: " "
