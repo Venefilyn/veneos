@@ -36,7 +36,7 @@ runs:
       shell: bash
       run: |-
         # Array to Hold Image Names
-        variants=("stable", "testing")
+        variants=("stable" "testing")
 
         # Make into Json Array
         variants="$(jq --null-input --compact-output '$ARGS.positional' \
