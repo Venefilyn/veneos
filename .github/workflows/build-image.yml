@@ -19,7 +19,6 @@ on:
         required: true
 
 env:
-  FEDORA_VERSION: 42 # The current Fedora Atomic version the non-CoreOS versions are using
   IMAGE_NAME: "${{ github.event.repository.name }}" # the name of the image produced by this build, matches repo names
   IMAGE_DESC: "${{ github.event.repository.description }}"
   IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}" # do not edit
@@ -90,8 +89,6 @@ jobs:
             type=raw,value=latest,enable=${{ matrix.variant == 'stable' }}
             type=raw,value=${{ matrix.variant }}
             type=raw,value=${{ matrix.variant }}.{{date 'YYYYMMDD'}}
-            type=raw,value=${{ matrix.variant }}-${{ env.FEDORA_VERSION }}
-            type=raw,value=${{ matrix.variant }}-${{ env.FEDORA_VERSION }}.{{date 'YYYYMMDD'}}
             type=sha,enable=${{ github.event_name == 'pull_request' }}
             type=ref,event=pr
           labels: |
