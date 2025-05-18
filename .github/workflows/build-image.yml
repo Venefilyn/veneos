@@ -100,7 +100,7 @@ jobs:
             org.opencontainers.image.title=${{ inputs.image_flavor }}
             org.opencontainers.image.url=https://github.com/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
             org.opencontainers.image.vendor=${{ github.repository_owner }}
-            org.opencontainers.image.version=${{ matrix.variant }}.{{date 'YYYYMMDD'}}
+            org.opencontainers.image.version=${{ matrix.variant }}
             io.artifacthub.package.deprecated=false
             io.artifacthub.package.keywords=bootc,ostree,ublue,universal-blue,veneos${{ inputs.image_flavor == 'veneos-server' && ',coreos,ucore' || ',bazzite' }}
             io.artifacthub.package.license=Apache-2.0
