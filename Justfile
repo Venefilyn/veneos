@@ -1,5 +1,8 @@
 export repo_organization := env("GITHUB_REPOSITORY_OWNER", "Venefilyn")
 export image_name := env("IMAGE_NAME", "veneos")
+export repo_image_name := lowercase(repo_organization) / lowercase(image_name)
+export IMAGE_REGISTRY := "ghcr.io" / repo_image_name
+
 export centos_version := env("CENTOS_VERSION", "stream10")
 export fedora_version := env("CENTOS_VERSION", "42")
 export default_tag := env("DEFAULT_TAG", "latest")
@@ -8,6 +11,12 @@ export bib_image := env("BIB_IMAGE", "quay.io/centos-bootc/bootc-image-builder:l
 alias build-vm := build-qcow2
 alias rebuild-vm := rebuild-qcow2
 alias run-vm := run-vm-qcow2
+
+# Build Containers
+[private]
+cosign-installer := "cgr.dev/chainguard/cosign:latest@sha256:5dc9288d077655a85245a1498aa9d4a65a26cc5e46cd983143bc5aeba5d0c01c"
+[private]
+syft-installer := "ghcr.io/anchore/syft:v1.23.1@sha256:d4c82a5ea021455ac8d645b5d398166681a1c9ed6b69df78f8efe226a5e9688b"
 
 [private]
 default:
@@ -46,6 +55,7 @@ clean:
     rm -f changelog.md
     rm -f output.env
     rm -f output/
+    rm -f ./*.sbom.*
 
 # Sudo Clean Repo
 [group('Utility')]
@@ -333,3 +343,152 @@ format:
 # Runs shfmt on all Bash scripts
 update-flatpaks:
     flatpak list --columns application --app > ./repo_files/flatpaks
+
+# Get Cosign if Needed
+[group('CI')]
+install-cosign:
+    #!/usr/bin/bash
+    set ${SET_X:+-x} -euo pipefail
+
+    # Get Cosign from Chainguard
+    if ! command -v cosign >/dev/null; then
+        # TMPDIR
+        TMPDIR="$(mktemp -d)"
+        trap 'rm -rf $TMPDIR' EXIT SIGINT
+
+        # Get Binary
+        COSIGN_CONTAINER_ID="$(podman create {{ cosign-installer }} bash)"
+        podman cp "${COSIGN_CONTAINER_ID}":/usr/bin/cosign "$TMPDIR"/cosign
+        podman rm -f "${COSIGN_CONTAINER_ID}"
+        podman rmi -f {{ cosign-installer }}
+
+        # Install
+        just sudoif install -c -m 0755 "$TMPDIR"/cosign /usr/local/bin/cosign
+
+        # Verify Cosign Image Signatures if needed
+        if ! cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com --certificate-identity=https://github.com/chainguard-images/images/.github/workflows/release.yaml@refs/heads/main cgr.dev/chainguard/cosign >/dev/null; then
+            echo "NOTICE: Failed to verify cosign image signatures."
+            exit 1
+        fi
+    fi
+
+# Install Syft
+[group('CI')]
+install-syft:
+    #!/usr/bin/bash
+    set ${SET_X:+-x} -eou pipefail
+
+    # Get SYFT if needed
+    if ! command -v syft >/dev/null; then
+        # Make TMPDIR
+        TMPDIR="$(mktemp -d)"
+        trap 'rm -rf $TMPDIR' EXIT SIGINT
+
+        # Get Binary
+        SYFT_ID="$(podman create {{ syft-installer }})"
+        podman cp "$SYFT_ID":/syft "$TMPDIR"/syft
+        podman rm -f "$SYFT_ID" > /dev/null
+        podman rmi -f {{ syft-installer }}
+
+        # Install
+        just sudoif install -c -m 0755 "$TMPDIR"/syft /usr/local/bin/syft
+    fi
+
+# Generate SBOM
+[group('CI')]
+gen-sbom $input $output="": install-syft
+    #!/usr/bin/bash
+    set ${SET_X:+-x} -eou pipefail
+
+    # Make SBOM
+    if [[ -z "$output" ]]; then
+        OUTPUT_PATH="$(mktemp -d)/sbom.json"
+    else
+        OUTPUT_PATH="$output"
+    fi
+    syft scan "{{ input }}" -o spdx-json="$OUTPUT_PATH" --select-catalogers "rpm,+sbom-cataloger"
+
+    # Output Path
+    echo "$OUTPUT_PATH"
+
+# Add SBOM Signing
+[group('CI')]
+sbom-sign input $sbom="": install-cosign
+    #!/usr/bin/bash
+    set ${SET_X:+-x} -eou pipefail
+
+    # set SBOM
+    if [[ ! -f "$sbom" ]]; then
+        echo $sbom
+        # sbom="$(just gen-sbom {{ input }})"
+    fi
+
+    # Sign-blob Args
+    SBOM_SIGN_ARGS=(
+       "--key" "env://COSIGN_PRIVATE_KEY"
+       "--output-signature" "$sbom.sig"
+       "$sbom"
+    )
+
+    # Sign SBOM
+    cosign sign-blob -y "${SBOM_SIGN_ARGS[@]}"
+
+    # Verify-blob Args
+    SBOM_VERIFY_ARGS=(
+        "--key" "cosign.pub"
+        "--signature" "$sbom.sig"
+        "$sbom"
+    )
+
+    # Verify Signature
+    cosign verify-blob "${SBOM_VERIFY_ARGS[@]}"
+
+# SBOM Attest
+[group('CI')]
+sbom-attest input $sbom="" $destination="": install-cosign
+    #!/usr/bin/bash
+    set ${SET_X:+-x} -eou pipefail
+
+    # set SBOM
+    if [[ ! -f "$sbom" ]]; then
+        sbom="$(just gen-sbom {{ input }})"
+    fi
+
+    # Compress
+    sbom_type="urn:ublue-os:attestation:spdx+json+zstd:v1"
+    compress_sbom="$sbom.zst"
+    zstd "$sbom" -o "$compress_sbom"
+
+    # Generate Payload
+    base64_payload="payload.b64"
+    base64 "$compress_sbom" | tr -d '\n' > "$base64_payload"
+
+    # Generate Predicate
+    predicate_file="wrapped-predicate.json"
+    jq -n \
+            --arg compression "zstd" \
+            --arg mediaType "application/spdx+json" \
+            --rawfile payload "$base64_payload" \
+            '{compression: $compression, mediaType: $mediaType, payload: $payload}' \
+            > "$predicate_file"
+
+    rm "$base64_payload"
+
+    # SBOM Attest args
+    SBOM_ATTEST_ARGS=(
+        "--predicate" "$predicate_file"
+        "--type" "$sbom_type"
+        "--key" "env://COSIGN_PRIVATE_KEY"
+    )
+
+    : "${destination:={{ IMAGE_REGISTRY }}}"
+    digest="$(skopeo inspect "{{ input }}" --format '{{{{ .Digest }}')"
+
+    cosign attest -y \
+        "${SBOM_ATTEST_ARGS[@]}" \
+        "$destination/{{ repo_image_name }}@${digest}"
+
+# Quiet By Default
+
+[private]
+export SET_X := if `id -u` == "0" { "1" } else { env("SET_X", "") }

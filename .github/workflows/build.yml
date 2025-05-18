@@ -1,0 +1,126 @@
+---
+name: Build VeneOS pipeline
+
+on:
+  schedule:
+    - cron: "12 13 * * *" # 13:12am UTC everyday
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "**/README.md"
+  merge_group:
+  workflow_dispatch:
+
+jobs:
+  build-image:
+    name: Build Images
+    uses: ./.github/workflows/build-image.yml
+    permissions:
+      actions: read
+      contents: read
+      packages: write
+      id-token: write
+    secrets:
+      SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image_flavor: ["veneos", "veneos-server"]
+    with:
+      image_flavor: ${{ matrix.image_flavor }}
+
+  # build-iso:
+  #   name: Build ISOs
+  #   if: ${{ ! contains(github.head_ref, 'renovate') }}
+  #   uses: ./.github/workflows/build-iso.yml
+  #   permissions:
+  #     actions: read
+  #     contents: read
+  #     packages: read
+  #   needs: [build-image]
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       image_flavor: ["veneos", "veneos-server"]
+  #   with:
+  #     image_flavor: ${{ matrix.image_flavor }}
+
+  # gen-sbom:
+  #   name: Generate SBOMs
+  #   if: ${{ ! contains(github.head_ref, 'renovate') }}
+  #   needs: [build-image]
+  #   uses: ./.github/workflows/gen-sbom.yml
+  #   permissions:
+  #     actions: read
+  #     contents: read
+  #     packages: write
+  #     security-events: write
+  #   secrets:
+  #     SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       image_flavor: ["veneos", "veneos-server"]
+  #   with:
+  #     image_flavor: ${{ matrix.image_flavor }}
+
+  # changelogs:
+  #   name: Generate Changelogs
+  #   if: ${{ ! contains(github.head_ref, 'renovate') }}
+  #   uses: ./.github/workflows/changelogs.yml
+  #   permissions:
+  #     contents: read
+  #   needs: ["build-iso"]
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       target: ["veneos", "veneos-server"]
+  #   with:
+  #     target: ${{ matrix.target }}
+
+  # create-release:
+  #   name: Create Release
+  #   if: ${{ ! contains(github.head_ref, 'renovate') }}
+  #   needs: ["changelogs", "gen-sbom"]
+  #   uses: ./.github/workflows/create-release.yml
+  #   permissions:
+  #     contents: write
+  #   with:
+  #     type: stable
+
+  # build-image-beta:
+  #   name: Build Beta Images
+  #   needs: [lint]
+  #   uses: ./.github/workflows/build-image.yml
+  #   permissions:
+  #     actions: read
+  #     contents: read
+  #     packages: write
+  #   secrets:
+  #     SIGNING_SECRET: ${{ secrets.SIGNING_SECRET }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       image_flavor: ["veneos", "veneos-server"]
+  #   with:
+  #     image_flavor: ${{ matrix.image_flavor }}
+
+  # build-iso-beta:
+  #   name: Build Beta ISOs
+  #   if: ${{ ! contains(github.head_ref, 'renovate') }}
+  #   uses: ./.github/workflows/build-iso.yml
+  #   permissions:
+  #     actions: read
+  #     contents: read
+  #     packages: read
+  #   needs: [build-image-beta]
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       image_flavor: ["veneos", "veneos-server"]
+  #   with:
+  #     image_flavor: ${{ matrix.image_flavor }}

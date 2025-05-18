@@ -8,7 +8,7 @@ mkdir -p /etc/pki/containers
 mkdir -p /etc/containers/registries.d/
 
 cat <<<"$(jq '.transports.docker |=. + {
-   "ghcr.io/venefilyn/veneos": [
+   "ghcr.io/venefilyn": [
     {
         "type": "sigstoreSigned",
         "keyPaths": [
@@ -25,6 +25,6 @@ cp /ctx/cosign.pub /etc/pki/containers/veneos.pub
 
 tee /etc/containers/registries.d/veneos.yaml <<EOF
 docker:
-  ghcr.io/venefilyn/veneos:
+  ghcr.io/venefilyn:
     use-sigstore-attachments: true
 EOF
