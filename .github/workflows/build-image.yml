@@ -86,6 +86,7 @@ jobs:
         id: metadata
         with:
           tags: |
+            type=raw,value=latest,enable=${{ matrix.variant == 'stable' }}
             type=raw,value=${{ matrix.variant }}
             type=raw,value=${{ matrix.variant }}.{{date 'YYYYMMDD'}}
             type=raw,value={{date 'YYYYMMDD'}}
