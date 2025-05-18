@@ -8,6 +8,8 @@ log() {
   echo "=== $* ==="
 }
 
+log "Installing RPM packages"
+
 log "Enable Copr repos"
 
 COPR_REPOS=(
@@ -80,6 +82,3 @@ dnf5 -y copr disable "${COPR_REPOS[@]}"
 # rpm-ostree override remove steam
 log "Removing Steam from Bazzite install, please use flatpak instead"
 dnf5 -y remove steam
-
-# Call other Scripts
-# /ctx/flatpak.sh
