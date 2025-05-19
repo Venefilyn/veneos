@@ -16,7 +16,6 @@ dnf5 clean all
 rm -rf /tmp/*
 rm -rf /var/*
 rm -rf /boot/*
-rm -rf /usr/etc
 
 # Restore and setup directories
 mkdir -p /tmp
@@ -25,5 +24,6 @@ mkdir -p /var/tmp \
 
 log "Cleanup completed"
 
-bootc container lint
+# Comment out this for now due to /usr/etc
+# bootc container lint
 ostree container commit
