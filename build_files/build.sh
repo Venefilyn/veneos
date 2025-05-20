@@ -22,6 +22,9 @@ log() {
 
 log "Starting VeneOS build process - Inspired by AmyOS and m2os"
 
+log "Install server packages"
+echo_group /ctx/server-packages.sh
+
 log "Enable container signing"
 echo_group /ctx/signing.sh
 
