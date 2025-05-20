@@ -10,3 +10,7 @@ SERVER_PACKAGES=(
     udica
     yq
 )
+
+# The superior default editor
+dnf5 swap -y \
+    nano-default-editor vim-default-editor
