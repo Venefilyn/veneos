@@ -15,7 +15,9 @@ log "Enable Copr repos"
 COPR_REPOS=(
     pgdev/ghostty
 )
-dnf5 -y copr enable "${COPR_REPOS[@]}"
+for repo in "${COPR_REPOS[@]}"; do
+    dnf5 -y copr enable "$repo"
+done
 
 log "Enable repositories"
 # Bazzite disabled this for some reason so lets re-enable it again
@@ -76,8 +78,10 @@ LAYERED_PACKAGES=(
 dnf5 install --setopt=install_weak_deps=False -y "${LAYERED_PACKAGES[@]}"
 
 log "Disable Copr repos as we do not need it anymore"
-dnf5 -y copr disable "${COPR_REPOS[@]}"
 
+for repo in "${COPR_REPOS[@]}"; do
+    dnf5 -y copr disable "$repo"
+done
 # Use flatpak steam with some addons instead
 # rpm-ostree override remove steam
 log "Removing Steam from Bazzite install, please use flatpak instead"
