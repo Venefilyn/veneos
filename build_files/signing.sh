@@ -7,6 +7,12 @@ mkdir -p /etc/containers
 mkdir -p /etc/pki/containers
 mkdir -p /etc/containers/registries.d/
 
+# TODO: Remove when things like uCore stops using /usr/etc for their policy.json
+# Also remove all the other relations to /usr/etc
+if [ -f /usr/etc/containers/policy.json ]; then
+    cp /usr/etc/containers/policy.json /etc/containers/policy.json
+fi
+
 cat <<<"$(jq '.transports.docker |=. + {
    "ghcr.io/venefilyn": [
     {
@@ -28,3 +34,6 @@ docker:
   ghcr.io/venefilyn:
     use-sigstore-attachments: true
 EOF
+
+mkdir -p /usr/etc/containers/
+cp /etc/containers/policy.json /usr/etc/containers/policy.json
