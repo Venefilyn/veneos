@@ -112,12 +112,13 @@ sudoif command *args:
 #
 
 # Build the image using the specified parameters
-build $target_image=image_name $tag=default_tag:
+build $target_image=image_name $tag=default_tag $base_tag=tag:
     #!/usr/bin/env bash
     set ${SET_X:+-x} -eou pipefail
     BUILD_ARGS=()
     BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
     BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
+    BUILD_ARGS+=("--build-arg" "TAG_VERSION=${base_tag}")
 
     case "{{ target_image }}" in
     "veneos")
@@ -496,19 +497,14 @@ rechunk $target_image=image_name $tag=default_tag:
     set ${SET_X:+-x} -eou pipefail
 
     OUTDIR=$(mktemp -d -p /var/tmp)
-    ROOTFSDIR=$(mktemp -d -p /var/tmp)
     cleanup() {
         sudo rm -rf $OUTDIR
-        sudo rm -rf $ROOTFSDIR
     }
     trap cleanup EXIT
 
-    podman export $(podman create "${target_image}:${tag}") | tar -xf - -C $ROOTFSDIR
-
     # The built image itself has a new enough rpm-ostree version to be able to do this.
-    podman run --rm -it -v "$OUTDIR:/out:Z" -v "$ROOTFSDIR:/rootfs:Z" "${target_image}:${tag}" \
+    podman run --rm -it -v "$OUTDIR:/out:Z" --mount "type=image,src="${target_image}:${tag}",dst=/rootfs" "${target_image}:${tag}" \
         sh -c "mkdir -p /var/tmp && /usr/bin/rpm-ostree experimental compose build-chunked-oci --bootc --format-version=1 --rootfs=/rootfs --output /out/out.oci"
-
     podman rmi -f "${target_image}:${tag}"
     # Load image into storage and tag it properly
     podman load -i $OUTDIR/out.oci | sed "s/Loaded image: //" | xargs -i podman tag '{}' "${target_image}:${tag}"
