@@ -155,8 +155,8 @@ jobs:
 
           IMAGE=${{ steps.registry_case.outputs.lowercase }}/${{ steps.image_case.outputs.lowercase }}:${{ matrix.variant }}
 
-          sudo $just rechunk "${IMAGE_NAME}" "${DEFAULT_TAG}"
-          sudo podman image tag "$IMAGE_NAME:${DEFAULT_TAG}" $IMAGE
+          sudo $just rechunk "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
+          sudo podman image tag "$IMAGE_NAME:${{ matrix.variant }}" $IMAGE
 
           IMAGE_DIGEST=$(sudo podman image inspect --format '{{.Digest}}' $IMAGE)
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
