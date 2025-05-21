@@ -1,6 +1,6 @@
-export repo_organization := env("GITHUB_REPOSITORY_OWNER", "Venefilyn")
-export image_name := env("IMAGE_NAME", "veneos")
-export repo_image_name := lowercase(repo_organization) / lowercase(image_name)
+export repo_organization := lowercase(env("GITHUB_REPOSITORY_OWNER", "Venefilyn"))
+export image_name := lowercase(env("IMAGE_NAME", "veneos"))
+export repo_image_name := repo_organization / image_name
 export IMAGE_REGISTRY := "ghcr.io" / repo_image_name
 
 export centos_version := env("CENTOS_VERSION", "stream10")
@@ -112,19 +112,22 @@ sudoif command *args:
 #
 
 # Build the image using the specified parameters
-build $target_image=image_name $tag=default_tag $dx="0" $hwe="0" $gdx="0":
+build $target_image=image_name $tag=default_tag:
     #!/usr/bin/env bash
-
-    # Get Version
-    ver="${tag}-${centos_version}.$(date +%Y%m%d)"
-
+    set ${SET_X:+-x} -eou pipefail
     BUILD_ARGS=()
-    BUILD_ARGS+=("--build-arg" "MAJOR_VERSION=${centos_version}")
     BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
     BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
-    BUILD_ARGS+=("--build-arg" "ENABLE_DX=${dx}")
-    BUILD_ARGS+=("--build-arg" "ENABLE_HWE=${hwe}")
-    BUILD_ARGS+=("--build-arg" "ENABLE_GDX=${gdx}")
+
+    case "{{ target_image }}" in
+    "veneos")
+        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/bazzite-gnome")
+        ;;
+    "veneos-server")
+        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/ucore-hci")
+        ;;
+    esac
+
     if [[ -z "$(git status -s)" ]]; then
         BUILD_ARGS+=("--build-arg" "SHA_HEAD_SHORT=$(git rev-parse --short HEAD)")
     fi
@@ -488,7 +491,28 @@ sbom-attest input $sbom="" $destination="": install-cosign
         "${SBOM_ATTEST_ARGS[@]}" \
         "$destination/{{ repo_image_name }}@${digest}"
 
-# Quiet By Default
+rechunk $target_image=image_name $tag=default_tag:
+    #!/usr/bin/env bash
+    set ${SET_X:+-x} -eou pipefail
 
+    OUTDIR=$(mktemp -d -p /var/tmp)
+    ROOTFSDIR=$(mktemp -d -p /var/tmp)
+    cleanup() {
+        sudo rm -rf $OUTDIR
+        sudo rm -rf $ROOTFSDIR
+    }
+    trap cleanup EXIT
+
+    podman export $(podman create "${target_image}:${tag}") | tar -xf - -C $ROOTFSDIR
+
+    # The built image itself has a new enough rpm-ostree version to be able to do this.
+    podman run --rm -it -v "$OUTDIR:/out:Z" -v "$ROOTFSDIR:/rootfs:Z" "${target_image}:${tag}" \
+        sh -c "mkdir -p /var/tmp && /usr/bin/rpm-ostree experimental compose build-chunked-oci --bootc --format-version=1 --rootfs=/rootfs --output /out/out.oci"
+
+    podman rmi -f "${target_image}:${tag}"
+    # Load image into storage and tag it properly
+    podman load -i $OUTDIR/out.oci | sed "s/Loaded image: //" | xargs -i podman tag '{}' "${target_image}:${tag}"
+
+# Quiet By Default
 [private]
 export SET_X := if `id -u` == "0" { "1" } else { env("SET_X", "") }
