@@ -496,18 +496,11 @@ rechunk $target_image=image_name $tag=default_tag:
     #!/usr/bin/env bash
     set ${SET_X:+-x} -eou pipefail
 
-    OUTDIR=$(mktemp -d -p /var/tmp)
-    cleanup() {
-        sudo rm -rf $OUTDIR
-    }
-    trap cleanup EXIT
-
     # The built image itself has a new enough rpm-ostree version to be able to do this.
-    podman run --rm -it -v "$OUTDIR:/out:Z" --mount "type=image,src="${target_image}:${tag}",dst=/rootfs" "${target_image}:${tag}" \
-        sh -c "mkdir -p /var/tmp && /usr/bin/rpm-ostree experimental compose build-chunked-oci --bootc --format-version=1 --rootfs=/rootfs --output /out/out.oci"
-    podman rmi -f "${target_image}:${tag}"
-    # Load image into storage and tag it properly
-    podman load -i $OUTDIR/out.oci | sed "s/Loaded image: //" | xargs -i podman tag '{}' "${target_image}:${tag}"
+    podman run --rm --privileged -v /var/lib/containers:/var/lib/containers "quay.io/centos-bootc/centos-bootc:stream10" \
+        /usr/libexec/bootc-base-imagectl rechunk \
+            localhost/${target_image}:${tag} \
+            localhost/${target_image}:${tag}
 
 # Quiet By Default
 [private]
