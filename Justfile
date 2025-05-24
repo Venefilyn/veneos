@@ -143,7 +143,7 @@ build $target_image=image_name $tag=default_tag $base_tag=tag $pr_number="0":
     LABELS+=("--label" "org.opencontainers.image.documentation=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/README.md")
     LABELS+=("--label" "org.opencontainers.image.source=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/Containerfile")
     LABELS+=("--label" "org.opencontainers.image.title=${image_name}")
-    LABELS+=("--label" "org.opencontainers.image.url=https://projectbluefin.io")
+    LABELS+=("--label" "org.opencontainers.image.url=https://github.com/${repo_organization}/${image_name}")
     LABELS+=("--label" "org.opencontainers.image.vendor=${repo_organization}")
     LABELS+=("--label" "org.opencontainers.image.version=${target_image}.$(date -u +%Y\-%m\-%d)")
 
@@ -165,7 +165,9 @@ build $target_image=image_name $tag=default_tag $base_tag=tag $pr_number="0":
     # Tags
     TAGS=()
     if [[ "${pr_number}" -gt 0 ]]; then
+        if [[ $tag==stable ]]; then
         TAGS+=("--tag" "localhost/${target_image}:pr-${pr_number}")
+        fi
         TAGS+=("--tag" "localhost/${target_image}:pr-${pr_number}.$(date -u +%Y\-%m\-%d)")
         TAGS+=("--tag" "localhost/${target_image}:pr-${pr_number}-$tag")
     else
@@ -536,6 +538,12 @@ sbom-attest input $sbom="" $destination="": install-cosign
     cosign attest -y \
         "${SBOM_ATTEST_ARGS[@]}" \
         "$destination/{{ repo_image_name }}@${digest}"
+
+# Get Container tags of an image without registry
+[group('CI')]
+get-tags $target_image=image_name:
+    tags=$(sudo podman image inspect {{target_image}} | jq -r '.[].RepoTags[]' | sed 's/localhost\///g')
+
 
 # Quiet By Default
 

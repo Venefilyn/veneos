@@ -109,7 +109,16 @@ jobs:
 
           sudo $just build "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}" "${{ matrix.variant }}" ${{ env.PR_NUMBER }}
 
-          echo "registry_tags=${TAGS[*]}" >> $GITHUB_OUTPUT
+      - name: Get tags
+        id: get_tags
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          just=$(which just)
+
+          sudo $just get-tags "localhost/${{ steps.image_case.outputs.lowercase }}:pr-${{env.PR_NUMBER}}-${{ matrix.variant }}"
+
+          echo "registry_tags=$tags" >> $GITHUB_OUTPUT
 
       # These `if` statements are so that pull requests for your custom images do not make it publish any packages under your name without you knowing
       # They also check if the runner is on the default branch so that things like the merge queue (if you enable it), are going to work
@@ -156,7 +165,7 @@ jobs:
         with:
           registry: ${{ steps.registry_case.outputs.lowercase }}
           image: ${{ steps.image_case.outputs.lowercase }}
-          tags: ${{ steps.build_image.outputs.registry_tags }}
+          tags: ${{ steps.get_tags.outputs.registry_tags }}
           username: ${{ env.REGISTRY_USER }}
           password: ${{ env.REGISTRY_PASSWORD }}
 
