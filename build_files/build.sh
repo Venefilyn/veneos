@@ -37,6 +37,7 @@ case "$BASE_IMAGE" in
 *"/ucore"*) ;;
 esac
 
+echo_group /ctx/overrides.sh
 
 log "Post build cleanup"
 echo_group /ctx/cleanup.sh
