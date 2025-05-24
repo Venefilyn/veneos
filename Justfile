@@ -1,6 +1,6 @@
-export repo_organization := env("GITHUB_REPOSITORY_OWNER", "Venefilyn")
-export image_name := env("IMAGE_NAME", "veneos")
-export repo_image_name := lowercase(repo_organization) / lowercase(image_name)
+export repo_organization := lowercase(env("GITHUB_REPOSITORY_OWNER", "Venefilyn"))
+export image_name := lowercase(env("IMAGE_NAME", "veneos"))
+export repo_image_name := repo_organization / image_name
 export IMAGE_REGISTRY := "ghcr.io" / repo_image_name
 
 export centos_version := env("CENTOS_VERSION", "stream10")
@@ -13,6 +13,8 @@ alias rebuild-vm := rebuild-qcow2
 alias run-vm := run-vm-qcow2
 
 # Build Containers
+[private]
+rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.2@sha256:e799d89f9a9965b5b0e89941a9fc6eaab62e9d2d73a0bfb92e6a495be0706907"
 [private]
 cosign-installer := "cgr.dev/chainguard/cosign:latest@sha256:5dc9288d077655a85245a1498aa9d4a65a26cc5e46cd983143bc5aeba5d0c01c"
 [private]
@@ -112,19 +114,23 @@ sudoif command *args:
 #
 
 # Build the image using the specified parameters
-build $target_image=image_name $tag=default_tag $dx="0" $hwe="0" $gdx="0":
+build $target_image=image_name $tag=default_tag $base_tag=tag:
     #!/usr/bin/env bash
-
-    # Get Version
-    ver="${tag}-${centos_version}.$(date +%Y%m%d)"
-
+    set ${SET_X:+-x} -eou pipefail
     BUILD_ARGS=()
-    BUILD_ARGS+=("--build-arg" "MAJOR_VERSION=${centos_version}")
     BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
     BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
-    BUILD_ARGS+=("--build-arg" "ENABLE_DX=${dx}")
-    BUILD_ARGS+=("--build-arg" "ENABLE_HWE=${hwe}")
-    BUILD_ARGS+=("--build-arg" "ENABLE_GDX=${gdx}")
+    BUILD_ARGS+=("--build-arg" "TAG_VERSION=${base_tag}")
+
+    case "{{ target_image }}" in
+    "veneos")
+        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/bazzite-gnome")
+        ;;
+    "veneos-server")
+        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/ucore-hci")
+        ;;
+    esac
+
     if [[ -z "$(git status -s)" ]]; then
         BUILD_ARGS+=("--build-arg" "SHA_HEAD_SHORT=$(git rev-parse --short HEAD)")
     fi
@@ -488,7 +494,41 @@ sbom-attest input $sbom="" $destination="": install-cosign
         "${SBOM_ATTEST_ARGS[@]}" \
         "$destination/{{ repo_image_name }}@${digest}"
 
-# Quiet By Default
+rechunk $target_image=image_name $tag=default_tag:
+    #!/usr/bin/env bash
+    set ${SET_X:+-x} -eou pipefail
 
+    echo "::group:: Rechunk Prune"
+    podman run --rm \
+        --privileged \
+        --security-opt label=disable \
+        --mount "type=image,src="${target_image}:${tag}",dst=/var/tree,rw=true" \
+        --env TREE=/var/tree \
+        --user 0:0 \
+        {{ rechunker }} \
+        /sources/rechunk/1_prune.sh
+    echo "::endgroup::"
+
+    echo "::group:: Create Tree"
+    podman run --rm \
+        --privileged \
+        --mount "type=image,src="${target_image}:${tag}",dst=/var/tree,rw=true" \
+        --env TREE=/var/tree \
+        --env RESET_TIMESTAMP=1 \
+        {{ rechunker }} \
+        /sources/rechunk/2_create.sh
+    echo "::endgroup::"
+
+    echo "::group:: Rechunk"
+    podman run --rm \
+        --privileged \
+        -v /var/lib/containers:/var/lib/containers \
+        "quay.io/centos-bootc/centos-bootc:stream10" \
+        /usr/libexec/bootc-base-imagectl rechunk \
+            localhost/${target_image}:${tag} \
+            localhost/${target_image}:${tag}
+    echo "::endgroup::"
+
+# Quiet By Default
 [private]
 export SET_X := if `id -u` == "0" { "1" } else { env("SET_X", "") }
