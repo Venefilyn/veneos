@@ -119,20 +119,6 @@ jobs:
         uses: sigstore/cosign-installer@3454372f43399081ed03b604cb2d021dabca52bb # v3.8.2
         if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
 
-      - name: Build Image
-        id: build_image
-        uses: redhat-actions/buildah-build@7a95fa7ee0f02d552a32753e7414641a04307056 # v2
-        with:
-          containerfiles: |
-            ./Containerfile
-          image: ${{ inputs.image_flavor }}
-          build-args: |
-            BASE_IMAGE=${{ needs.get-images.outputs.image }}
-            TAG_VERSION=${{ matrix.variant }}
-          tags: ${{ steps.metadata.outputs.tags }}
-          labels: ${{ steps.metadata.outputs.labels }}
-          oci: false
-
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
       - name: Lowercase Registry
@@ -147,15 +133,42 @@ jobs:
         with:
           string: ${{ inputs.image_flavor }}
 
-      # These `if` statements are so that pull requests for your custom images do not make it publish any packages under your name without you knowing
-      # They also check if the runner is on the default branch so that things like the merge queue (if you enable it), are going to work
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+      # Verify the container image and if it fails, we just don't push this at all
+      # Something is up and we need to manually check
+      - name: Verify upstream container image
         if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          cosign verify \
+            --key ./build_files/ublue.pub \
+            "${{ needs.get-images.outputs.image }}"
+
+      - name: Build Image
+        id: build_image
+        env:
+          PR_NUMBER: ${{ github.event.number || '0' }}
+        run: |
+          just=$(which just)
+
+          sudo $just build "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}" stable
+
+      - name: Generate tags
+        id: tags
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        env:
+          PR_NUMBER: ${{ github.event.number || '0' }}
+        run: |
+          just=$(which just)
+
+          tags=$(sudo $just generate-build-tags "${{ matrix.variant }}" "${{ env.PR_NUMBER }}")
+          echo "tags=$tags" >> $GITHUB_OUTPUT
+      # Tag Images
+      - name: Tag Images
+        run: |
+          just=$(which just)
+          sudo $just tag-images "${{ steps.image_case.outputs.lowercase }}" \
+                          "${{ matrix.variant }}" \
+                          "${{ steps.tags.outputs.tags }}"
 
       - name: Login to GitHub Container Registry (ORAS)
         id: oras_ghcr_login
@@ -172,29 +185,24 @@ jobs:
             --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
             artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
 
-      # Verify the container image and if it fails, we just don't push this at all
-      # Something is up and we need to manually check
-      - name: Verify upstream container image
-        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+      - name: Push To GHCR
+        id: push
+        if: >-
+          contains(fromJson('["workflow_dispatch", "merge_group"]'),
+          github.event_name)
+        env:
+          ACTOR: ${{ github.actor }}
+          TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          cosign verify \
-            --key ./build_files/ublue.pub \
-            "${{ needs.get-images.outputs.image }}"
+          set -eou pipefail
+          just=$(which just)
 
-      - name: Push To GHCR
-        uses: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
-        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-        id: push
-        env:
-          REGISTRY_USER: ${{ github.actor }}
-          REGISTRY_PASSWORD: ${{ github.token }}
-        with:
-          registry: ${{ steps.registry_case.outputs.lowercase }}
-          image: ${{ steps.image_case.outputs.lowercase }}
-          tags: ${{ steps.metadata.outputs.tags }}
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASSWORD }}
+          sudo $just login-to-ghcr ${{ env.ACTOR }} ${{ env.TOKEN }}
+
+          digest=$(sudo $just push-to-registry "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}" "${{ steps.tags.outputs.tags }}" "${{ env.IMAGE_REGISTRY }}")
+
+          echo "digest=$digest" >> $GITHUB_OUTPUT
 
       # Signing container image so anyone and ourselves can easily verify its authenticity
       # for future updates.
