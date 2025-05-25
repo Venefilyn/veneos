@@ -111,12 +111,11 @@ jobs:
 
       - name: Get tags
         id: get_tags
-        env:
-          PR_NUMBER: ${{ github.event.number }}
+        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         run: |
           just=$(which just)
 
-          sudo $just get-tags "localhost/${{ steps.image_case.outputs.lowercase }}:pr-${{env.PR_NUMBER}}-${{ matrix.variant }}"
+          sudo $just get-tags "localhost/${{ steps.image_case.outputs.lowercase }}:${{ matrix.variant }}"
 
           echo "registry_tags=$tags" >> $GITHUB_OUTPUT
 
