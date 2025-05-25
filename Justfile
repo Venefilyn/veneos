@@ -112,7 +112,7 @@ sudoif command *args:
 #
 
 # Build the image using the specified parameters
-build $target_image=image_name $tag=default_tag $dx="0" $hwe="0" $gdx="0":
+build $target_image=image_name $tag=default_tag $base_tag=tag:
     #!/usr/bin/env bash
 
     # Get Version
@@ -129,10 +129,37 @@ build $target_image=image_name $tag=default_tag $dx="0" $hwe="0" $gdx="0":
         BUILD_ARGS+=("--build-arg" "SHA_HEAD_SHORT=$(git rev-parse --short HEAD)")
     fi
 
+    # Labels
+    LABELS=()
+    LABELS+=("--label" "org.opencontainers.image.created=$(date -u +%Y\-%m\-%d\T%H\:%M\:%S\Z)")
+    LABELS+=("--label" "org.opencontainers.image.description=${IMAGE_DESC:+""}")
+    LABELS+=("--label" "org.opencontainers.image.documentation=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/README.md")
+    LABELS+=("--label" "org.opencontainers.image.source=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/Containerfile")
+    LABELS+=("--label" "org.opencontainers.image.title=${image_name}")
+    LABELS+=("--label" "org.opencontainers.image.url=https://github.com/${repo_organization}/${image_name}")
+    LABELS+=("--label" "org.opencontainers.image.vendor=${repo_organization}")
+    LABELS+=("--label" "org.opencontainers.image.version=${target_image}.$(date -u +%Y\-%m\-%d)")
+
+    LABELS+=("--label" "io.artifacthub.package.readme-url=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/README.md")
+    LABELS+=("--label" "io.artifacthub.package.deprecated=false")
+    keywords=("bootc" "ostree" "ublue" "universal-blue" "veneos")
+    if [[ $target_image==veneos-server ]]; then
+        keywords+=("coreos" "ucore")
+    else
+        keywords+=("bazzite")
+    fi
+    LABELS+=("--label" "io.artifacthub.package.keywords=$(IFS=, ; echo "${keywords[*]}")")
+    LABELS+=("--label" "io.artifacthub.package.license=Apache-2.0")
+    LABELS+=("--label" "io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/${repo_owner_id}?s=200&v=4")
+    LABELS+=("--label" "io.artifacthub.package.prerelease=false")
+    LABELS+=("--label" "io.artifacthub.package.maintainers=[{\"name\": \"Freya Gustavsson\", \"email\": \"freya@venefilyn.se\"}]")
+    LABELS+=("--label" "containers.bootc=1")
+
     podman build \
         "${BUILD_ARGS[@]}" \
+        "${LABELS[@]}" \
         --pull=newer \
-        --tag "${target_image}:${tag}" \
+        --tag "localhost/${target_image}:${tag}" \
         .
 
 # Command: _rootful_load_image
@@ -488,7 +515,63 @@ sbom-attest input $sbom="" $destination="": install-cosign
         "${SBOM_ATTEST_ARGS[@]}" \
         "$destination/{{ repo_image_name }}@${digest}"
 
-# Quiet By Default
+# Generate Tags
+[group('Utility')]
+generate-build-tags $tag=default_tag $github_number="0":
+    #!/usr/bin/env bash
+    set ${SET_X:+-x} -eou pipefail
 
+    DATE="$(date -u +%Y\-%m\-%d)"
+    TAGS=()
+
+    if [[ "${github_number}" -gt 0 ]]; then
+        SHA_SHORT="$(git rev-parse --short HEAD)"
+        TAGS+=("pr-${github_number}-${tag}.${DATE}" "${SHA_SHORT}-${tag}.${DATE}")
+    else
+        if [[ $tag == stable ]]; then
+            TAGS+=("latest")
+        fi
+        TAGS+=("${tag}" "${tag}.${DATE}")
+    fi
+
+    echo "${TAGS[@]}"
+
+# Tag Images
+[group('Utility')]
+tag-images image_name="" default_tag="" tags="":
+    #!/usr/bin/bash
+    set -eou pipefail
+
+    # Get Image, and untag
+    IMAGE=$(podman inspect localhost/{{ image_name }}:{{ default_tag }} --format '{{{{.Id}}')
+
+    # Tag Image
+    for tag in {{ tags }}; do
+        podman tag $IMAGE {{ image_name }}:${tag}
+    done
+
+    # Show Images
+    podman images --filter id=$IMAGE
+
+# Login to GHCR
+[group('CI')]
+@login-to-ghcr $user $token:
+    echo "$token" | podman login ghcr.io -u "$user" --password-stdin
+
+# Push Images to Registry
+[group('CI')]
+push-to-registry $image_name $default_tag $tags="" registry=IMAGE_REGISTRY:
+    #!/usr/bin/env bash
+    set ${SET_X:+-x} -eou pipefail
+
+    for tag in $tags; do
+        podman push "${image_name}:${tag}" "docker://{{lowercase(registry)}}/${image_name}:${tag}"
+    done
+
+    digest=$(skopeo inspect docker://{{lowercase(registry)}}/${image_name}:${default_tag} --format '{{{{.Digest}}')
+
+    echo "$digest"
+
+# Quiet By Default
 [private]
 export SET_X := if `id -u` == "0" { "1" } else { env("SET_X", "") }
