@@ -115,7 +115,7 @@ jobs:
         run: |
           just=$(which just)
 
-          tags=$($just get-tags "localhost/${{ steps.image_case.outputs.lowercase }}:${{ matrix.variant }}")
+          tags=$($just get-tags "localhost/${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}")
           echo "registry_tags=$tags" >> $GITHUB_OUTPUT
 
       # These `if` statements are so that pull requests for your custom images do not make it publish any packages under your name without you knowing
