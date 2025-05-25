@@ -542,7 +542,9 @@ sbom-attest input $sbom="" $destination="": install-cosign
 # Get Container tags of an image without registry
 [group('CI')]
 get-tags $target_image=image_name:
-    tags=$(sudo podman image inspect {{target_image}} | jq -r '.[].RepoTags[]' | sed 's/localhost\///g')
+    echo $(sudo podman image inspect {{target_image}} --format '{{{{.RepoTags }}' | sed -e 's/[][]//g' -e 's/localhost\///g')
+
+
 
 
 # Quiet By Default
