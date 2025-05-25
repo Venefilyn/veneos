@@ -1,7 +1,6 @@
-export repo_organization := lowercase(env("GITHUB_REPOSITORY_OWNER", "Venefilyn"))
-export image_name := lowercase(env("IMAGE_NAME", "veneos"))
-export repo_image_name := repo_organization / image_name
-export repo_owner_id := env("GITHUB_REPOSITORY_OWNER_ID", "6598829")
+export repo_organization := env("GITHUB_REPOSITORY_OWNER", "Venefilyn")
+export image_name := env("IMAGE_NAME", "veneos")
+export repo_image_name := lowercase(repo_organization) / lowercase(image_name)
 export IMAGE_REGISTRY := "ghcr.io" / repo_image_name
 
 export centos_version := env("CENTOS_VERSION", "stream10")
@@ -113,77 +112,27 @@ sudoif command *args:
 #
 
 # Build the image using the specified parameters
-build $target_image=image_name $tag=default_tag $base_tag=tag $pr_number="0":
+build $target_image=image_name $tag=default_tag $dx="0" $hwe="0" $gdx="0":
     #!/usr/bin/env bash
-    set ${SET_X:+-x} -eou pipefail
 
-    # Build Arguments
+    # Get Version
+    ver="${tag}-${centos_version}.$(date +%Y%m%d)"
+
     BUILD_ARGS=()
+    BUILD_ARGS+=("--build-arg" "MAJOR_VERSION=${centos_version}")
     BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
-    # BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
-    BUILD_ARGS+=("--build-arg" "TAG_VERSION=${base_tag}")
-
-    case "{{ target_image }}" in
-    "veneos")
-        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/bazzite-gnome")
-        ;;
-    "veneos-server")
-        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/ucore-hci")
-        ;;
-    esac
-
+    BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
+    BUILD_ARGS+=("--build-arg" "ENABLE_DX=${dx}")
+    BUILD_ARGS+=("--build-arg" "ENABLE_HWE=${hwe}")
+    BUILD_ARGS+=("--build-arg" "ENABLE_GDX=${gdx}")
     if [[ -z "$(git status -s)" ]]; then
         BUILD_ARGS+=("--build-arg" "SHA_HEAD_SHORT=$(git rev-parse --short HEAD)")
     fi
 
-    # Labels
-    LABELS=()
-    LABELS+=("--label" "org.opencontainers.image.created=$(date -u +%Y\-%m\-%d\T%H\:%M\:%S\Z)")
-    LABELS+=("--label" "org.opencontainers.image.description=${IMAGE_DESC:+""}")
-    LABELS+=("--label" "org.opencontainers.image.documentation=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/README.md")
-    LABELS+=("--label" "org.opencontainers.image.source=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/Containerfile")
-    LABELS+=("--label" "org.opencontainers.image.title=${image_name}")
-    LABELS+=("--label" "org.opencontainers.image.url=https://github.com/${repo_organization}/${image_name}")
-    LABELS+=("--label" "org.opencontainers.image.vendor=${repo_organization}")
-    LABELS+=("--label" "org.opencontainers.image.version=${target_image}.$(date -u +%Y\-%m\-%d)")
-
-    LABELS+=("--label" "io.artifacthub.package.readme-url=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/README.md")
-    LABELS+=("--label" "io.artifacthub.package.deprecated=false")
-    keywords=("bootc" "ostree" "ublue" "universal-blue" "veneos")
-    if [[ $target_image==veneos-server ]]; then
-        keywords+=("coreos" "ucore")
-    else
-        keywords+=("bazzite")
-    fi
-    LABELS+=("--label" "io.artifacthub.package.keywords=$(IFS=, ; echo "${keywords[*]}")")
-    LABELS+=("--label" "io.artifacthub.package.license=Apache-2.0")
-    LABELS+=("--label" "io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/${repo_owner_id}?s=200&v=4")
-    LABELS+=("--label" "io.artifacthub.package.prerelease=false")
-    LABELS+=("--label" "io.artifacthub.package.maintainers=[{\"name\": \"Freya Gustavsson\", \"email\": \"freya@venefilyn.se\"}]")
-    LABELS+=("--label" "containers.bootc=1")
-
-    # Tags
-    TAGS=()
-    if [[ "${pr_number}" -gt 0 ]]; then
-        if [[ $tag==stable ]]; then
-        TAGS+=("--tag" "localhost/${target_image}:pr-${pr_number}")
-        fi
-        TAGS+=("--tag" "localhost/${target_image}:pr-${pr_number}.$(date -u +%Y\-%m\-%d)")
-        TAGS+=("--tag" "localhost/${target_image}:pr-${pr_number}-$tag")
-    else
-        if [[ $tag==stable ]]; then
-            TAGS+=("--tag" "localhost/${target_image}:latest")
-        fi
-        TAGS+=("--tag" "localhost/${target_image}:$tag")
-        TAGS+=("--tag" "localhost/${target_image}:$tag.$(date -u +%Y\-%m\-%d)")
-    fi
-
     podman build \
         "${BUILD_ARGS[@]}" \
-        "${LABELS[@]}" \
-        "${TAGS[@]}" \
         --pull=newer \
-        --file Containerfile \
+        --tag "${target_image}:${tag}" \
         .
 
 # Command: _rootful_load_image
@@ -538,11 +487,6 @@ sbom-attest input $sbom="" $destination="": install-cosign
     cosign attest -y \
         "${SBOM_ATTEST_ARGS[@]}" \
         "$destination/{{ repo_image_name }}@${digest}"
-
-# Get Container tags of an image without registry
-[group('CI')]
-get-tags $target_image=image_name $tag=default_tag:
-    echo $(sudo podman image inspect {{target_image}}:{{tag}} --format '{{{{.RepoTags }}' | sed -e 's/[][]//g' -e 's/{{replace(target_image, '/', '\/')}}://g' -e 's/localhost\///g')
 
 # Quiet By Default
 
