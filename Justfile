@@ -106,7 +106,7 @@ sudoif command *args:
 # just build $target_image $tag $dx $hwe $gdx
 #
 # Example usage:
-#   just build aurora lts 1 0 1
+#   just build veneos-server testing 1 0 1
 #
 # This will build an image 'aurora:lts' with DX and GDX enabled.
 #
@@ -115,16 +115,18 @@ sudoif command *args:
 build $target_image=image_name $tag=default_tag $base_tag=tag:
     #!/usr/bin/env bash
 
-    # Get Version
-    ver="${tag}-${centos_version}.$(date +%Y%m%d)"
-
     BUILD_ARGS=()
-    BUILD_ARGS+=("--build-arg" "MAJOR_VERSION=${centos_version}")
     BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
     BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
-    BUILD_ARGS+=("--build-arg" "ENABLE_DX=${dx}")
-    BUILD_ARGS+=("--build-arg" "ENABLE_HWE=${hwe}")
-    BUILD_ARGS+=("--build-arg" "ENABLE_GDX=${gdx}")
+    BUILD_ARGS+=("--build-arg" "TAG_VERSION=${base_tag}")
+    case "$target_image" in
+    "veneos-server")
+        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/ucore-hci")
+        ;;
+    "veneos")
+        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/bazzite-gnome")
+        ;;
+    esac
     if [[ -z "$(git status -s)" ]]; then
         BUILD_ARGS+=("--build-arg" "SHA_HEAD_SHORT=$(git rev-parse --short HEAD)")
     fi
@@ -142,12 +144,16 @@ build $target_image=image_name $tag=default_tag $base_tag=tag:
 
     LABELS+=("--label" "io.artifacthub.package.readme-url=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/README.md")
     LABELS+=("--label" "io.artifacthub.package.deprecated=false")
+
     keywords=("bootc" "ostree" "ublue" "universal-blue" "veneos")
-    if [[ $target_image==veneos-server ]]; then
+    case "$target_image" in
+    "veneos-server")
         keywords+=("coreos" "ucore")
-    else
+        ;;
+    "veneos")
         keywords+=("bazzite")
-    fi
+        ;;
+    esac
     LABELS+=("--label" "io.artifacthub.package.keywords=$(IFS=, ; echo "${keywords[*]}")")
     LABELS+=("--label" "io.artifacthub.package.license=Apache-2.0")
     LABELS+=("--label" "io.artifacthub.package.logo-url=https://avatars.githubusercontent.com/u/${repo_owner_id}?s=200&v=4")
