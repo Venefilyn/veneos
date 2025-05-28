@@ -150,7 +150,7 @@ jobs:
         run: |
           just=$(which just)
 
-          sudo $just build "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}" stable
+          sudo $just build "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
 
       - name: Generate tags
         id: tags
