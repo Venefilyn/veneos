@@ -15,7 +15,6 @@ dnf5 clean all
 # Clean temporary files
 rm -rf /tmp/*
 rm -rf /var/*
-rm -rf /boot/*
 rm -rf /usr/etc
 
 # Restore and setup directories
