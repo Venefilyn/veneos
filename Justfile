@@ -15,6 +15,8 @@ alias run-vm := run-vm-qcow2
 
 # Build Containers
 [private]
+rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.2@sha256:e799d89f9a9965b5b0e89941a9fc6eaab62e9d2d73a0bfb92e6a495be0706907"
+[private]
 cosign-installer := "cgr.dev/chainguard/cosign:latest@sha256:5dc9288d077655a85245a1498aa9d4a65a26cc5e46cd983143bc5aeba5d0c01c"
 [private]
 syft-installer := "ghcr.io/anchore/syft:v1.23.1@sha256:d4c82a5ea021455ac8d645b5d398166681a1c9ed6b69df78f8efe226a5e9688b"
@@ -115,6 +117,7 @@ sudoif command *args:
 # Build the image using the specified parameters
 build $target_image=image_name $tag=default_tag $base_tag=tag:
     #!/usr/bin/env bash
+    set ${SET_X:+-x} -eou pipefail
 
     BUILD_ARGS=()
     BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
@@ -578,6 +581,42 @@ push-to-registry $image_name $default_tag $tags="" registry=IMAGE_REGISTRY:
     digest=$(skopeo inspect docker://{{lowercase(registry)}}/${image_name}:${default_tag} --format '{{{{.Digest}}')
 
     echo "$digest"
+
+[group('Utility')]
+rechunk $target_image=image_name $tag=default_tag:
+    #!/usr/bin/env bash
+    set ${SET_X:+-x} -eou pipefail
+
+    # echo "::group:: Rechunk Prune"
+    # podman run --rm \
+    #     --privileged \
+    #     --security-opt label=disable \
+    #     --mount "type=image,src="localhost/${target_image}:${tag}",dst=/var/tree,rw=true" \
+    #     --env TREE=/var/tree \
+    #     --user 0:0 \
+    #     {{ rechunker }} \
+    #     /sources/rechunk/1_prune.sh
+    # echo "::endgroup::"
+
+    # echo "::group:: Create Tree"
+    # podman run --rm \
+    #     --privileged \
+    #     --mount "type=image,src="localhost/${target_image}:${tag}",dst=/var/tree,rw=true" \
+    #     --env TREE=/var/tree \
+    #     --env RESET_TIMESTAMP=1 \
+    #     {{ rechunker }} \
+    #     /sources/rechunk/2_create.sh
+    # echo "::endgroup::"
+
+    echo "::group:: Rechunk"
+    podman run --rm \
+        --privileged \
+        -v /var/lib/containers:/var/lib/containers \
+        "quay.io/centos-bootc/centos-bootc:{{centos_version}}" \
+        /usr/libexec/bootc-base-imagectl rechunk \
+            localhost/${target_image}:${tag} \
+            localhost/${target_image}:${tag}
+    echo "::endgroup::"
 
 # Quiet By Default
 [private]

@@ -6,7 +6,8 @@ COPY build_files cosign.pub /
 
 # Base Image
 FROM ${BASE_IMAGE}:${TAG_VERSION} AS veneos
-COPY system_files /
+COPY system_files/etc /etc
+COPY system_files/usr/share /usr/share
 
 ARG BASE_IMAGE="ghcr.io/ublue-os/bazzite-gnome"
 ARG TAG_VERSION="latest"
