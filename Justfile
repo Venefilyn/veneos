@@ -1,6 +1,7 @@
 export repo_organization := env("GITHUB_REPOSITORY_OWNER", "Venefilyn")
 export image_name := env("IMAGE_NAME", "veneos")
 export repo_image_name := lowercase(repo_organization) / lowercase(image_name)
+export repo_owner_id := "6598829"
 export IMAGE_REGISTRY := "ghcr.io" / repo_image_name
 
 export centos_version := env("CENTOS_VERSION", "stream10")
