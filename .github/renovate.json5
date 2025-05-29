@@ -3,17 +3,41 @@
   extends: ["config:best-practices"],
 
   rebaseWhen: "never",
-
+  customManagers: [
+    {
+      customType: 'regex',
+      managerFilePatterns: [
+        '/^Justfile$/',
+      ],
+      matchStrings: [
+        '(?<justName>.+?)\\s:=\\s"(?<packageName>\\S+):(?<currentValue>\\S+)@(?<currentDigest>sha256:[a-f0-9]+?)"',
+      ],
+      datasourceTemplate: 'docker',
+    },
+  ],
   packageRules: [
     {
       automerge: true,
       matchUpdateTypes: ["pin", "pinDigest"],
     },
     {
-      enabled: false,
-      matchUpdateTypes: ["digest", "pinDigest", "pin"],
-      matchDepTypes: ["container"],
-      matchFileNames: [".github/workflows/**.yaml", ".github/workflows/**.yml"],
+      automerge: true,
+      groupName: 'Build Containers',
+      matchPackageNames: [
+        'cgr.dev/chainguard/cosign',
+        'ghcr.io/anchore/syft',
+      ],
+    },
+    {
+      automerge: true,
+      matchManagers: [
+        'github-actions',
+      ],
+      matchUpdateTypes: [
+        'pin',
+        'digest',
+        'pinDigest',
+      ],
     },
   ],
 }
