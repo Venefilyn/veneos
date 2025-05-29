@@ -1,4 +1,5 @@
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/veneos)](https://artifacthub.io/packages/container/veneos/veneos)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/veneos-server)](https://artifacthub.io/packages/container/veneos-server/veneos-server)
 [![Build VeneOS](https://github.com/Venefilyn/veneos/actions/workflows/build.yml/badge.svg)](https://github.com/Venefilyn/veneos/actions/workflows/build.yml)
 [![Build VeneOS ISO](https://github.com/Venefilyn/veneos/actions/workflows/build-iso.yml/badge.svg)](https://github.com/Venefilyn/veneos/actions/workflows/build-iso.yml)
 
@@ -18,6 +19,9 @@ Primarily intended for myself.
 - Optimized for AMD GPU
 
 ### Server
+
+> [!WARNING]
+> veneos-server is currently not tested
 
 - Built on Fedora CoreOS
 - Uses [uCore Hyper-Coverged Infrastructure (HCI)](https://github.com/ublue-os/ucore)
