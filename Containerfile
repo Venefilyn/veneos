@@ -1,5 +1,5 @@
 ARG BASE_IMAGE="ghcr.io/ublue-os/bazzite-gnome"
-ARG TAG_VERSION="latest"
+ARG TAG_VERSION="latest@sha256:7b960815fbf0f18097abe4dda20765b64d24522197a3280044a848711f71d127"
 # Allow build scripts to be referenced without being copied into the final image
 FROM scratch AS ctx
 COPY build_files cosign.pub /
