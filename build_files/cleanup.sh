@@ -16,6 +16,8 @@ dnf5 clean all
 rm -rf /tmp/*
 rm -rf /var/*
 rm -rf /usr/etc
+# FIXME: Somehow .nvimlog is added after installing. But only when done in CI - not locally.
+rm -f /.nvimlog
 
 # Restore and setup directories
 mkdir -p /tmp
