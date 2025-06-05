@@ -11,6 +11,8 @@ SERVER_PACKAGES=(
     yq
 )
 
+dnf5 install --setopt=install_weak_deps=False -y "${SERVER_PACKAGES[@]}"
+
 # The superior default editor
 dnf5 swap -y \
     nano-default-editor vim-default-editor
