@@ -3,8 +3,9 @@
 set ${SET_X:+-x} -eou pipefail
 
 SERVER_PACKAGES=(
-    just
+    borgbackup
     jq
+    just
     skopeo
     tmux
     udica
