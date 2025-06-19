@@ -67,7 +67,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Maximize build space
-        uses: AdityaGarg8/remove-unwanted-software@8831c82abf29b34eb2caac48d5f999ecfc0d8eef # v4.1
+        uses: AdityaGarg8/remove-unwanted-software@90e01b21170618765a73370fcc3abbd1684a7793 # v5
         with:
           remove-dotnet: true
           remove-android: true
