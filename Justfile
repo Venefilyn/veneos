@@ -17,7 +17,7 @@ alias run-vm := run-vm-qcow2
 [private]
 rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.2@sha256:e799d89f9a9965b5b0e89941a9fc6eaab62e9d2d73a0bfb92e6a495be0706907"
 [private]
-cosign-installer := "cgr.dev/chainguard/cosign:latest@sha256:a5626158c5caa0f41ebb0193ed59da57c728d0a3a1646b67212a32d2de8fbac9"
+cosign-installer := "cgr.dev/chainguard/cosign:latest@sha256:9c3b72d1ac953f76727f1ec13c03063148397390c115db8373d1f8597d3c1594"
 [private]
 syft-installer := "ghcr.io/anchore/syft:v1.27.1@sha256:844ed6a928ef9396fac26d1de374e71dcaf80df14f05841670ed41619c5a718f"
 
