@@ -15,7 +15,7 @@ alias run-vm := run-vm-qcow2
 
 # Build Containers
 [private]
-rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.2@sha256:e799d89f9a9965b5b0e89941a9fc6eaab62e9d2d73a0bfb92e6a495be0706907"
+rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.3@sha256:51ffc4c31ac050c02ae35d8ba9e5f5e518b76cfc9b37372df4b881974978443c"
 [private]
 cosign-installer := "cgr.dev/chainguard/cosign:latest@sha256:e01fe7eef1a5072e5eda46bf0b791114dcc30bc7585891c0cd782c1d9533faee"
 [private]
