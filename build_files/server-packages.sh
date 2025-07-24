@@ -6,6 +6,7 @@ SERVER_PACKAGES=(
     borgbackup
     jq
     just
+    python3-ramalama
     skopeo
     tmux
     udica
