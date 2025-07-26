@@ -1,5 +1,8 @@
 #!/usr/bin/bash
 
+# shellcheck disable=SC1091
+. /ctx/commit-wrapper.sh
+
 set ${SET_X:+-x} -eou pipefail
 
 trap '[[ $BASH_COMMAND != echo* ]] && [[ $BASH_COMMAND != log* ]] && echo "+ $BASH_COMMAND"' DEBUG
@@ -19,7 +22,6 @@ for repo in "${COPR_REPOS[@]}"; do
     dnf5 -y copr enable "$repo"
 done
 
-log "Enable repositories"
 # Bazzite disabled this for some reason so lets re-enable it again
 dnf5 config-manager setopt terra.enabled=1 terra-extras.enabled=1
 

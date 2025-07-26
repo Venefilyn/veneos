@@ -1,4 +1,8 @@
 #!/usr/bin/bash
+
+# shellcheck disable=SC1091
+. /ctx/commit-wrapper.sh
+
 set ${SET_X:+-x} -euo pipefail
 
 trap '[[ $BASH_COMMAND != echo* ]] && [[ $BASH_COMMAND != log* ]] && echo "+ $BASH_COMMAND"' DEBUG
@@ -25,6 +29,3 @@ mkdir -p /var/tmp \
 && chmod -R 1777 /var/tmp
 
 log "Cleanup completed"
-
-bootc container lint
-ostree container commit
