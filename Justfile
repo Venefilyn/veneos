@@ -119,16 +119,29 @@ build $target_image=image_name $tag=default_tag $base_tag=tag:
     #!/usr/bin/env bash
     set ${SET_X:+-x} -eou pipefail
 
+    {{ ci_grouping }}
+
+
+    echo "################################################################################"
+    echo "image  := {{ target_image }}"
+    echo "CI     := {{ CI }}"
+    echo "################################################################################"
+
     BUILD_ARGS=()
+    if [[ -v CI ]]; then
+        BUILD_ARGS+=("--cpp-flag" "-DGHCI")
+    fi
     BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
     BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
     BUILD_ARGS+=("--build-arg" "TAG_VERSION=${base_tag}")
     case "$target_image" in
     "veneos-server")
         BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/ucore-hci")
+        BUILD_ARGS+=("--cpp-flag" "-DSERVER")
         ;;
     "veneos")
         BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/bazzite-gnome")
+        BUILD_ARGS+=("--cpp-flag" "-DBAZZITE")
         ;;
     esac
     if [[ -z "$(git status -s)" ]]; then
@@ -166,11 +179,12 @@ build $target_image=image_name $tag=default_tag $base_tag=tag:
     LABELS+=("--label" "containers.bootc=1")
 
     podman build \
+        --file Containerfile.in \
         "${BUILD_ARGS[@]}" \
         "${LABELS[@]}" \
         --pull=newer \
         --tag "localhost/${target_image}:${tag}" \
-        .
+        {{ justfile_dir() }}
 
 # Command: _rootful_load_image
 # Description: This script checks if the current user is root or running under sudo. If not, it attempts to resolve the image tag using podman inspect.
@@ -618,6 +632,15 @@ rechunk $target_image=image_name $tag=default_tag:
             localhost/${target_image}:${tag}
     echo "::endgroup::"
 
+ci_grouping := '
+if [[ -n "${CI:-}" ]]; then
+    echo "::group::' + style('warning') + '${BASH_SOURCE[0]##*/} step' + NORMAL + '"
+    trap "echo ::endgroup::" EXIT
+fi'
+
 # Quiet By Default
 [private]
 export SET_X := if `id -u` == "0" { "1" } else { env("SET_X", "") }
+
+[private]
+CI := env('CI', '')

@@ -1,5 +1,8 @@
 #!/usr/bin/bash
 
+# shellcheck disable=SC1091
+. /ctx/commit-wrapper.sh
+
 set ${SET_X:+-x} -eou pipefail
 
 

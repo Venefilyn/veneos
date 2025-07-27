@@ -1,0 +1,59 @@
+ARG BASE_IMAGE="ghcr.io/ublue-os/bazzite-gnome"
+ARG TAG_VERSION="latest@sha256:29e0d70c1a98c65f528ffdf62e30483452fc3dc68dc63ac2dc7e48a40a36d96d"
+
+FROM scratch AS ctx
+COPY build_files cosign.pub /
+
+FROM ${BASE_IMAGE}:${TAG_VERSION} AS veneos
+COPY system_files/etc /etc
+COPY system_files/usr/share /usr/share
+
+ARG BASE_IMAGE="ghcr.io/ublue-os/bazzite-gnome"
+ARG TAG_VERSION="latest"
+ARG SET_X=""
+#ifdef GHCI
+ARG CI="1"
+#endif /* GHCI */
+
+RUN --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/server-packages.sh
+
+RUN --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/signing.sh
+
+#ifdef BAZZITE
+RUN --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/desktop-packages.sh
+
+RUN --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/just-files.sh
+
+RUN --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/desktop-defaults.sh
+#endif /* BAZZITE */
+
+RUN --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/overrides.sh
+
+RUN --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    /ctx/cleanup.sh
+
+RUN ["bootc", "container", "lint"]
