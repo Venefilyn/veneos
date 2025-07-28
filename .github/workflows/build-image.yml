@@ -125,14 +125,18 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.number || '0' }}
         run: |
-          just build "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
+          just=$(which just)
+
+          sudo $just build "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
 
       - name: Generate tags
         id: tags
         env:
           PR_NUMBER: ${{ github.event.number || '0' }}
         run: |
-          tags=$(just generate-build-tags "${{ matrix.variant }}" "${{ env.PR_NUMBER }}")
+          just=$(which just)
+
+          tags=$(sudo $just generate-build-tags "${{ matrix.variant }}" "${{ env.PR_NUMBER }}")
           echo "tags=$tags" >> $GITHUB_OUTPUT
 
       # Split up image layers
@@ -141,10 +145,11 @@ jobs:
         id: load
         run: |
           set ${SET_X:+-x}
+          just=$(which just)
 
           IMAGE="localhost/${{ steps.image_case.outputs.lowercase }}:${{ matrix.variant }}"
 
-          just rechunk "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
+          sudo $just rechunk "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
 
           IMAGE_DIGEST=$(sudo podman image inspect --format '{{.Digest}}' $IMAGE)
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
@@ -153,7 +158,8 @@ jobs:
       # Tag Images
       - name: Tag Images
         run: |
-          just tag-images "${{ steps.image_case.outputs.lowercase }}" \
+          just=$(which just)
+          sudo $just tag-images "${{ steps.image_case.outputs.lowercase }}" \
                         "${{ matrix.variant }}" \
                         "${{ steps.tags.outputs.tags }}"
 
@@ -181,10 +187,11 @@ jobs:
         shell: bash
         run: |
           set -eou pipefail
+          just=$(which just)
 
-          just login-to-ghcr ${{ env.ACTOR }} ${{ env.TOKEN }}
+          sudo $just login-to-ghcr ${{ env.ACTOR }} ${{ env.TOKEN }}
 
-          digest=$(just push-to-registry "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}" "${{ steps.tags.outputs.tags }}" "${{ env.IMAGE_REGISTRY }}")
+          digest=$(sudo $just push-to-registry "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}" "${{ steps.tags.outputs.tags }}" "${{ env.IMAGE_REGISTRY }}")
 
           echo "digest=$digest" >> $GITHUB_OUTPUT
 
