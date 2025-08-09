@@ -8,6 +8,7 @@ on:
         type: choice
         options:
           - "veneos"
+          - "veneos-bootc"
           - "veneos-server"
         default: "veneos"
   workflow_call:

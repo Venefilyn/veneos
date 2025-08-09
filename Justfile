@@ -3,7 +3,6 @@ export image_name := env("IMAGE_NAME", "veneos")
 export repo_image_name := lowercase(repo_organization) / lowercase(image_name)
 export repo_owner_id := "6598829"
 export IMAGE_REGISTRY := "ghcr.io" / repo_image_name
-
 export centos_version := env("CENTOS_VERSION", "stream10")
 export fedora_version := env("CENTOS_VERSION", "42")
 export default_tag := env("DEFAULT_TAG", "latest")
@@ -14,6 +13,7 @@ alias rebuild-vm := rebuild-qcow2
 alias run-vm := run-vm-qcow2
 
 # Build Containers
+
 [private]
 rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.3@sha256:51ffc4c31ac050c02ae35d8ba9e5f5e518b76cfc9b37372df4b881974978443c"
 [private]
@@ -89,27 +89,15 @@ sudoif command *args:
 # Arguments:
 #   $target_image - The tag you want to apply to the image (default: aurora).
 #   $tag - The tag for the image (default: lts).
-#   $dx - Enable DX (default: "0").
-#   $hwe - Enable HWE (default: "0").
-#   $gdx - Enable GDX (default: "0").
-#
-# DX:
-#   Developer Experience (DX) is a feature that allows you to install the latest developer tools for your system.
-#   Packages include VScode, Docker, Distrobox, and more.
-# HWE:
-#   Hardware Enablement (HWE) is a feature that allows you to install the latest hardware support for your system.
-#   Currently this install the Hyperscale SIG kernel which will stay ahead of the CentOS Stream kernel and enables btrfs
-# GDX: https://docs.projectaurora.io/gdx/
-#   GPU Developer Experience (GDX) creates a base as an AI and Graphics platform.
-#   Installs Nvidia drivers, CUDA, and other tools.
+#   $base_tag - The underlying tag for the image (default: $tag).
 #
 # The script constructs the version string using the tag and the current date.
 # If the git working directory is clean, it also includes the short SHA of the current HEAD.
 #
-# just build $target_image $tag $dx $hwe $gdx
+# just build $target_image $tag $base_tag
 #
 # Example usage:
-#   just build veneos-server testing 1 0 1
+#   just build veneos testing 1 1
 #
 # This will build an image 'aurora:lts' with DX and GDX enabled.
 #
@@ -121,20 +109,19 @@ build $target_image=image_name $tag=default_tag $base_tag=tag:
 
     {{ ci_grouping }}
 
-
-    echo "################################################################################"
-    echo "image  := {{ target_image }}"
-    echo "CI     := {{ CI }}"
-    echo "################################################################################"
-
     BUILD_ARGS=()
     if [[ -v CI ]]; then
         BUILD_ARGS+=("--cpp-flag" "-DGHCI")
     fi
     BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
     BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
-    BUILD_ARGS+=("--build-arg" "TAG_VERSION=${base_tag}")
     case "$target_image" in
+    "veneos-bootc")
+        # cayo only has fedora as the tag at the moment.
+        base_tag="fedora"
+        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/cayo")
+        BUILD_ARGS+=("--cpp-flag" "-DBOOTC")
+        ;;
     "veneos-server")
         BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/ucore-hci")
         BUILD_ARGS+=("--cpp-flag" "-DSERVER")
@@ -144,6 +131,7 @@ build $target_image=image_name $tag=default_tag $base_tag=tag:
         BUILD_ARGS+=("--cpp-flag" "-DBAZZITE")
         ;;
     esac
+    BUILD_ARGS+=("--build-arg" "TAG_VERSION=${base_tag}")
     if [[ -z "$(git status -s)" ]]; then
         BUILD_ARGS+=("--build-arg" "SHA_HEAD_SHORT=$(git rev-parse --short HEAD)")
     fi
@@ -164,6 +152,9 @@ build $target_image=image_name $tag=default_tag $base_tag=tag:
 
     keywords=("bootc" "ostree" "ublue" "universal-blue" "veneos")
     case "$target_image" in
+    "veneos-bootc")
+        keywords+=("cayo" "bootc")
+        ;;
     "veneos-server")
         keywords+=("coreos" "ucore")
         ;;
@@ -589,10 +580,10 @@ push-to-registry $image_name $default_tag $tags="" registry=IMAGE_REGISTRY:
     set ${SET_X:+-x} -eou pipefail
 
     for tag in $tags; do
-        podman push "${image_name}:${tag}" "docker://{{lowercase(registry)}}/${image_name}:${tag}"
+        podman push "${image_name}:${tag}" "docker://{{ lowercase(registry) }}/${image_name}:${tag}"
     done
 
-    digest=$(skopeo inspect docker://{{lowercase(registry)}}/${image_name}:${default_tag} --format '{{{{.Digest}}')
+    digest=$(skopeo inspect docker://{{ lowercase(registry) }}/${image_name}:${default_tag} --format '{{{{.Digest}}')
 
     echo "$digest"
 
@@ -626,7 +617,7 @@ rechunk $target_image=image_name $tag=default_tag:
     podman run --rm \
         --privileged \
         -v /var/lib/containers:/var/lib/containers \
-        "quay.io/centos-bootc/centos-bootc:{{centos_version}}" \
+        "quay.io/centos-bootc/centos-bootc:{{ centos_version }}" \
         /usr/libexec/bootc-base-imagectl rechunk \
             localhost/${target_image}:${tag} \
             localhost/${target_image}:${tag}
@@ -639,8 +630,8 @@ if [[ -n "${CI:-}" ]]; then
 fi'
 
 # Quiet By Default
+
 [private]
 export SET_X := if `id -u` == "0" { "1" } else { env("SET_X", "") }
-
 [private]
 CI := env('CI', '')
