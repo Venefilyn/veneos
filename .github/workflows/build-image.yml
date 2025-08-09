@@ -62,17 +62,14 @@ jobs:
         variant: ["${{ fromJson(needs.get-images.outputs.variants) }}"]
 
     steps:
+      - name: Mount BTRFS for podman storage
+        uses: ublue-os/container-storage-action@main
+        with:
+          target-dir: /var/lib/containers
+
       # These stage versions are pinned by https://github.com/renovatebot/renovate
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
-
-      - name: Maximize build space
-        uses: AdityaGarg8/remove-unwanted-software@90e01b21170618765a73370fcc3abbd1684a7793 # v5
-        with:
-          remove-dotnet: true
-          remove-android: true
-          remove-haskell: true
-          remove-codeql: true
 
       # Needed to add ArtifactHub manifest
       - name: Install ORAS
