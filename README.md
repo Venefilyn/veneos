@@ -17,11 +17,21 @@ Primarily intended for myself.
 - Uses [Bazzite](https://bazzite.gg/) as the base image
 - GNOME 48
 - Optimized for AMD GPU
+- [Bazzite features](https://github.com/ublue-os/bazzite#about--features)
+
+### Bootc 
+
+> [!NOTE]
+> `veneos-bootc` is in in early stages and is subject to change.
+
+- Built on Fedora Bootc
+- Uses [Cayo Fedora](https://github.com/ublue-os/cayo)
+- Cockpit installed
 
 ### Server
 
-> [!WARNING]
-> veneos-server is currently not tested
+> [!CAUTION]
+> `veneos-server` has never been deployed and is not regularly tested, proceed at your own risk.
 
 - Built on Fedora CoreOS
 - Uses [uCore Hyper-Coverged Infrastructure (HCI)](https://github.com/ublue-os/ucore)
@@ -29,9 +39,9 @@ Primarily intended for myself.
 
 ## Features
 
-- [Bazzite features](https://github.com/ublue-os/bazzite#about--features)
 - Curated list of [Flatpaks](https://github.com/Veneflyn/veneos/blob/main/repo_files/flatpaks)
-- Starship prompt, Fish, `fuck` alias and Atuin history search (Ctrl+R). Started through zsh
+- Starship prompt, `fish`, `fuck` alias and Atuin history search (Ctrl+R). 
+- POSIX compliant `fish` that starts through through `zsh`
 - NodeJS and front-end tooling
 - Setup command for git to work with SSH auth, SSH signing, and to work within containers without extra configuration
 
@@ -57,7 +67,40 @@ If you want to install the image on a new system download and install Bazzite IS
 
 <https://download.bazzite.gg/bazzite-stable-amd64.iso>
 
+### Bootc
+
+#### Existing installation
+
+> [!IMPORTANT]
+> This is executed within a Fedora CoreOS LiveUSB boot.
+
+> [!NOTE]
+> Command below assumes `/dev/sda` is the one you want to install to.
+
+To install on a fresh system through LiveUSB, add the SSH keys that will be used to access the system.
+This is easiest done through a fileserver setup on another machine. 
+
+```bash
+mkdir .ssh
+curl http://lab-server/id_rsa.pub > .ssh/authorized_keys
+```
+
+Then you can install through `podman`
+
+```bash
+sudo podman run \
+      --rm --privileged \
+      --pid=host \
+      -v /dev:/dev \
+      -v /var/lib/containers:/var/lib/containers \
+      -v ~/.ssh:/temp \
+      --security-opt label=type:unconfined_t \
+      ghcr.io/venefilyn/bootc:latest \
+      bootc install to-disk /dev/sda --root-ssh-authorized-keys /temp/authorized_keys --filesystem xfs
+```
+
 ### Server
+Based on CoreOS.
 
 #### Existing installation
 
