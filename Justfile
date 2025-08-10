@@ -1,3 +1,4 @@
+just := just_executable()
 export repo_organization := env("GITHUB_REPOSITORY_OWNER", "Venefilyn")
 export image_name := env("IMAGE_NAME", "veneos")
 export repo_image_name := lowercase(repo_organization) / lowercase(image_name)
@@ -7,6 +8,7 @@ export centos_version := env("CENTOS_VERSION", "stream10")
 export fedora_version := env("CENTOS_VERSION", "42")
 export default_tag := env("DEFAULT_TAG", "latest")
 export bib_image := env("BIB_IMAGE", "quay.io/centos-bootc/bootc-image-builder:latest")
+export images := env("IMAGES", "$(yq '.images' images.yml)")
 
 alias build-vm := build-qcow2
 alias rebuild-vm := rebuild-qcow2
@@ -31,10 +33,10 @@ check:
     #!/usr/bin/bash
     find . -type f -name "*.just" | while read -r file; do
     	echo "Checking syntax: $file"
-    	just --unstable --fmt --check -f $file
+    	{{ just }} --unstable --fmt --check -f $file
     done
     echo "Checking syntax: Justfile"
-    just --unstable --fmt --check -f Justfile
+    {{ just }} --unstable --fmt --check -f Justfile
 
 # Fix Just Syntax
 [group('Just')]
@@ -42,10 +44,10 @@ fix:
     #!/usr/bin/bash
     find . -type f -name "*.just" | while read -r file; do
     	echo "Checking syntax: $file"
-    	just --unstable --fmt -f $file
+    	{{ just }} --unstable --fmt -f $file
     done
     echo "Checking syntax: Justfile"
-    just --unstable --fmt -f Justfile || { exit 1; }
+    {{ just }} --unstable --fmt -f Justfile || { exit 1; }
 
 # Clean Repo
 [group('Utility')]
@@ -64,7 +66,7 @@ clean:
 [group('Utility')]
 [private]
 sudo-clean:
-    just sudoif just clean
+    {{ just }} sudoif {{ just }} clean
 
 # sudoif bash function
 [group('Utility')]
@@ -103,35 +105,36 @@ sudoif command *args:
 #
 
 # Build the image using the specified parameters
-build $target_image=image_name $tag=default_tag $base_tag=tag:
+build $target_image=image_name $tag=default_tag:
     #!/usr/bin/env bash
     set ${SET_X:+-x} -eou pipefail
 
     {{ ci_grouping }}
 
     BUILD_ARGS=()
+
+    # Verify that the image to build exists
+    image=$(echo "{{ images }}" | yq ".[] | select(.name == \"$target_image\")")
+    if [[ -z $image ]]; then
+        echo "Possible typo. The image '$target_image' did not exist in 'images.yml'."
+        exit 1
+    fi
+
+    # Verify that the tag has a corresponding mapping for the upstream base
+    upstream_tag=$(echo "$image" | yq ".mapping[] | select(.base == \"${tag}\") | .upstream")
+    if [[ -z $upstream_tag ]]; then
+        echo "Possible typo. The image '$target_image' did have a tag mapping for '$tag' in 'images.yml'."
+        exit 1
+    fi
+
     if [[ -v CI ]]; then
         BUILD_ARGS+=("--cpp-flag" "-DGHCI")
     fi
     BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
     BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
-    case "$target_image" in
-    "veneos-bootc")
-        # cayo only has fedora as the tag at the moment.
-        base_tag="fedora"
-        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/cayo")
-        BUILD_ARGS+=("--cpp-flag" "-DBOOTC")
-        ;;
-    "veneos-server")
-        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/ucore-hci")
-        BUILD_ARGS+=("--cpp-flag" "-DSERVER")
-        ;;
-    "veneos")
-        BUILD_ARGS+=("--build-arg" "BASE_IMAGE=ghcr.io/ublue-os/bazzite-gnome")
-        BUILD_ARGS+=("--cpp-flag" "-DBAZZITE")
-        ;;
-    esac
-    BUILD_ARGS+=("--build-arg" "TAG_VERSION=${base_tag}")
+    BUILD_ARGS+=("--build-arg" "BASE_IMAGE=$(echo "$image" | yq '.image')")
+    BUILD_ARGS+=("--cpp-flag" "-D$(echo "$image" | yq '.id')")
+    BUILD_ARGS+=("--build-arg" "TAG_VERSION=$upstream_tag")
     if [[ -z "$(git status -s)" ]]; then
         BUILD_ARGS+=("--build-arg" "SHA_HEAD_SHORT=$(git rev-parse --short HEAD)")
     fi
@@ -177,6 +180,22 @@ build $target_image=image_name $tag=default_tag $base_tag=tag:
         --tag "localhost/${target_image}:${tag}" \
         {{ justfile_dir() }}
 
+# Build the image using the specified parameters
+image-flavors $target_image=image_name:
+    #!/usr/bin/env bash
+    set ${SET_X:+-x} -eou pipefail
+
+    {{ ci_grouping }}
+
+    # Verify that the image to build exists
+    base_tags=$(echo "{{ images }}" | yq -o json ".[] | select(.name == \"$target_image\") | [.mapping[].base]")
+    if [[ -z $base_tags ]]; then
+        echo "Possible typo. The image '$target_image' did not exist in 'images.yml'."
+        exit 1
+    fi
+
+    echo $base_tags
+
 # Command: _rootful_load_image
 # Description: This script checks if the current user is root or running under sudo. If not, it attempts to resolve the image tag using podman inspect.
 #              If the image is found, it loads it into rootful podman. If the image is not found, it pulls it from the repository.
@@ -214,16 +233,16 @@ _rootful_load_image $target_image=image_name $tag=default_tag:
 
     if [[ $return_code -eq 0 ]]; then
         # If the image is found, load it into rootful podman
-        ID=$(just sudoif podman images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
+        ID=$({{ just }} sudoif podman images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
         if [[ "$ID" != "$USER_IMG_ID" ]]; then
             # If the image ID is not found or different from user, copy the image from user podman to root podman
             COPYTMP=$(mktemp -p "${PWD}" -d -t _build_podman_scp.XXXXXXXXXX)
-            just sudoif TMPDIR=${COPYTMP} podman image scp ${UID}@localhost::"${target_image}:${tag}" root@localhost::"${target_image}:${tag}"
+            {{ just }} sudoif TMPDIR=${COPYTMP} podman image scp ${UID}@localhost::"${target_image}:${tag}" root@localhost::"${target_image}:${tag}"
             rm -rf "${COPYTMP}"
         fi
     else
         # If the image is not found, pull it from the repository
-        just sudoif podman pull "${target_image}:${tag}"
+        {{ just }} sudoif podman pull "${target_image}:${tag}"
     fi
 
 # Build a bootc bootable image using Bootc Image Builder (BIB)
@@ -315,7 +334,7 @@ _run-vm $target_image $tag $type $config:
 
     # Build the image if it does not exist
     if [[ ! -f "${image_file}" ]]; then
-        just "build-${type}" "$target_image" "$tag"
+        {{ just }} "build-${type}" "$target_image" "$tag"
     fi
 
     # Determine an available port to use
@@ -363,7 +382,7 @@ spawn-vm rebuild="0" type="qcow2" ram="6G":
 
     set -euo pipefail
 
-    [ "{{ rebuild }}" -eq 1 ] && echo "Rebuilding the ISO" && just build-vm {{ rebuild }} {{ type }}
+    [ "{{ rebuild }}" -eq 1 ] && echo "Rebuilding the ISO" && {{ just }} build-vm {{ rebuild }} {{ type }}
 
     systemd-vmspawn \
       -M "bootc-image" \
@@ -405,7 +424,7 @@ install-cosign:
         podman rmi -f {{ cosign-installer }}
 
         # Install
-        just sudoif install -c -m 0755 "$TMPDIR"/cosign /usr/local/bin/cosign
+        {{ just }} sudoif install -c -m 0755 "$TMPDIR"/cosign /usr/local/bin/cosign
 
         # Verify Cosign Image Signatures if needed
         if ! cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com --certificate-identity=https://github.com/chainguard-images/images/.github/workflows/release.yaml@refs/heads/main cgr.dev/chainguard/cosign >/dev/null; then
@@ -433,8 +452,28 @@ install-syft:
         podman rmi -f {{ syft-installer }}
 
         # Install
-        just sudoif install -c -m 0755 "$TMPDIR"/syft /usr/local/bin/syft
+        {{ just }} sudoif install -c -m 0755 "$TMPDIR"/syft /usr/local/bin/syft
     fi
+
+# Get Cosign if Needed
+[group('CI')]
+cosign-verify-image $target_image=image_name $tag=default_tag $key="./build_files/ublue.pub": install-cosign
+    #!/usr/bin/env bash
+    set ${SET_X:+-x} -eou pipefail
+
+    {{ ci_grouping }}
+
+    image=$(echo "{{ images }}" | yq ".[] | select(.name == \"$target_image\")")
+    upstream_image=$(echo "$image" | yq ".image")
+    upstream_tag=$(echo "$image" | yq ".mapping[] | select(.base == \"${tag}\") | .upstream")
+    if [[ -z $upstream_tag ]]; then
+        echo "Possible typo. The image '$target_image' did have a tag mapping for '$tag' in 'images.yml'."
+        exit 1
+    fi
+
+    cosign verify \
+        --key $key \
+        "$upstream_image:$upstream_tag"
 
 # Generate SBOM
 [group('CI')]
@@ -462,7 +501,7 @@ sbom-sign input $sbom="": install-cosign
     # set SBOM
     if [[ ! -f "$sbom" ]]; then
         echo $sbom
-        # sbom="$(just gen-sbom {{ input }})"
+        # sbom="$({{ just }} gen-sbom {{ input }})"
     fi
 
     # Sign-blob Args
@@ -493,7 +532,7 @@ sbom-attest input $sbom="" $destination="": install-cosign
 
     # set SBOM
     if [[ ! -f "$sbom" ]]; then
-        sbom="$(just gen-sbom {{ input }})"
+        sbom="$({{ just }} gen-sbom {{ input }})"
     fi
 
     # Compress
