@@ -1,0 +1,25 @@
+images:
+  - name: veneos
+    id: BAZZITE
+    image: ghcr.io/ublue-os/bazzite-gnome
+    mapping:
+      - base: stable
+        upstream: stable
+      - base: testing
+        upstream: testing
+
+  - name: veneos-server
+    id: SERVER
+    image: ghcr.io/ublue-os/ucore-hci
+    mapping:
+      - base: stable
+        upstream: stable
+      - base: testing
+        upstream: testing
+
+  - name: veneos-bootc
+    id: BOOTC
+    image: ghcr.io/ublue-os/cayo
+    mapping:
+      - base: prerelease
+        upstream: fedora
