@@ -1,3 +1,5 @@
+set unstable := true
+
 just := just_executable()
 export repo_organization := env("GITHUB_REPOSITORY_OWNER", "Venefilyn")
 export image_name := env("IMAGE_NAME", "veneos")
@@ -10,9 +12,9 @@ export default_tag := env("DEFAULT_TAG", "latest")
 export bib_image := env("BIB_IMAGE", "quay.io/centos-bootc/bootc-image-builder:latest")
 export images := env("IMAGES", "$(yq '.images' images.yml)")
 
-alias build-vm := build-qcow2
-alias rebuild-vm := rebuild-qcow2
-alias run-vm := run-vm-qcow2
+podman := require('podman')
+podman-remote := which('podman-remote') || podman + ' --remote'
+builddir := shell('mkdir -p $1 && echo $1', absolute_path(env('CAYO_BUILD', 'build')))
 
 # Build Containers
 
@@ -22,6 +24,13 @@ rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.3@sha256:51ffc4c31ac050c02ae35d8ba9e5
 cosign-installer := "cgr.dev/chainguard/cosign:latest@sha256:c4c496d1d60a25943a0a9132d011f68fe83af9608fcaaa3899c3d1a8b5fa19bf"
 [private]
 syft-installer := "ghcr.io/anchore/syft:v1.28.0@sha256:bc71d110d271c823b3e3c58702aa8ad6bf06e2abd3c1ff7c8966420a9a57dc00"
+[private]
+bootc-image-builder := "quay.io/centos-bootc/bootc-image-builder:latest"
+
+[private]
+PRIVKEY := env('HOME') / '.local/share/containers/podman/machine/machine'
+[private]
+PUBKEY := PRIVKEY + '.pub'
 
 [private]
 default:
@@ -245,81 +254,82 @@ _rootful_load_image $target_image=image_name $tag=default_tag:
         {{ just }} sudoif podman pull "${target_image}:${tag}"
     fi
 
-# Build a bootc bootable image using Bootc Image Builder (BIB)
-# Converts a container image to a bootable image
-# Parameters:
-#   target_image: The name of the image to build (ex. localhost/fedora)
-#   tag: The tag of the image to build (ex. latest)
-#   type: The type of image to build (ex. qcow2, raw, iso)
-#   config: The configuration file to use for the build (default: image.toml)
-
-# Example: just _rebuild-bib localhost/fedora latest qcow2 image.toml
-_build-bib $target_image $tag $type $config: (_rootful_load_image target_image tag)
+# Podman Machine Init
+[group('Podman Machine')]
+init-machine:
     #!/usr/bin/env bash
-    set -euo pipefail
+    set -oux pipefail
+    ram_size="$(( $(free --mega | awk '/^Mem:/{print $7}') / 2 ))"
+    ram_size="$(( ram_size >= 16384 ? 16384 : $(( ram_size >= 8192 ? 8192 : $(( ram_size >= 4096 ? 4096 : $(( ram_size >= 2048 ? 2048 : $(( ram_size >= 1024 ? 1024 : 0 )) )) )) )) ))"
+    {{ podman-remote }} machine init veneos-bib \
+        --rootful \
+        --memory "${ram_size}" \
+        --volume "{{ justfile_dir() + ":" + justfile_dir() }}" \
+        --volume "{{ env('HOME') + ":" + env('HOME') }}" 2>{{ builddir }}/error.log
+    ec=$?
+    if [ $ec != 0 ] && ! grep -q 'VM already exists' {{ builddir }}/error.log; then
+        printf '{{ style('error') }}Error:{{ NORMAL }} %s\n' "$(sed -E 's/Error:\s//' {{ builddir }}/error.log)" >&2
+        exit $ec
+    fi
+    exit 0
 
-    args="--type ${type} "
-    args+="--use-librepo=True "
-    args+="--rootfs=btrfs"
+# Start Podman Machine
+[group('Podman Machine')]
+start-machine: init-machine
+    #!/usr/bin/env bash
+    set -oux pipefail
+    {{ podman }} machine start veneos-bib 2>{{ builddir }}/error.log
+    ec=$?
+    if [ $ec != 0 ] && ! grep -q 'already running' {{ builddir }}/error.log; then
+        printf '{{ style('error') }}Error:{{ NORMAL }} %s\n' "$(sed -E 's/Error:\s//' {{ builddir }}/error.log)" >&2
+        exit $ec
+    fi
+    exit 0
 
-    if [[ $target_image == localhost/* ]]; then
-        args+=" --local"
+# Build Disk Image
+[group('BIB')]
+build-disk $variant="" $version="" $registry="": start-machine
+    #!/usr/bin/env bash
+    : "${registry:=localhost}"
+    fq_name="$registry/$image_name:$version"
+    set -eoux pipefail
+    # Create Build Dir
+    mkdir -p {{ builddir / '$variant-$version' }}
+
+    # Process Template
+    cp BIB/disk.toml {{ builddir / '$variant-$version/disk.toml' }}
+    sed -i "s|<SSHPUBKEY>|$(cat {{ PUBKEY }})|" {{ builddir / '$variant-$version/disk.toml' }}
+
+    # Load image into rootful podman-machine
+    if ! {{ podman-remote }} image exists $fq_name && ! {{ podman }} image exists $fq_name; then
+        echo "{{ style('error') }}Error:{{ NORMAL }} Image \"$fq_name\" not in image-store" >&2
+        exit 1
+    fi
+    if ! {{ podman-remote }} image exists $fq_name; then
+        COPYTMP="$(mktemp -p {{ builddir }} -d -t podman_scp.XXXXXXXXXX)" && trap 'rm -rf $COPYTMP' EXIT SIGINT
+        TMPDIR="$COPYTMP" {{ podman }} image scp $fq_name veneos-bib::
+        rm -rf "$COPYTMP"
     fi
 
-    BUILDTMP=$(mktemp -p "${PWD}" -d -t _build-bib.XXXXXXXXXX)
+    # Pull Bootc Image Builder
+    {{ podman-remote }} pull --retry 3 {{ bootc-image-builder }}
 
-    sudo podman run \
-      --rm \
-      -it \
-      --privileged \
-      --pull=newer \
-      --net=host \
-      --security-opt label=type:unconfined_t \
-      -v $(pwd)/${config}:/config.toml:ro \
-      -v $BUILDTMP:/output \
-      -v /var/lib/containers/storage:/var/lib/containers/storage \
-      "${bib_image}" \
-      ${args} \
-      "${target_image}:${tag}"
-
-    mkdir -p output
-    sudo mv -f $BUILDTMP/* output/
-    sudo rmdir $BUILDTMP
-    sudo chown -R $USER:$USER output/
-
-# Podman builds the image from the Containerfile and creates a bootable image
-# Parameters:
-#   target_image: The name of the image to build (ex. localhost/fedora)
-#   tag: The tag of the image to build (ex. latest)
-#   type: The type of image to build (ex. qcow2, raw, iso)
-#   config: The configuration file to use for the build (deafult: image.toml)
-
-# Example: just _rebuild-bib localhost/fedora latest qcow2 image.toml
-_rebuild-bib $target_image $tag $type $config: (build target_image tag) && (_build-bib target_image tag type config)
-
-# Build a QCOW2 virtual machine image
-[group('Build Virtal Machine Image')]
-build-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "qcow2" "image.toml")
-
-# Build a RAW virtual machine image
-[group('Build Virtal Machine Image')]
-build-raw $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "raw" "image.toml")
-
-# Build an ISO virtual machine image
-[group('Build Virtal Machine Image')]
-build-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "iso" "iso.toml")
-
-# Rebuild a QCOW2 virtual machine image
-[group('Build Virtal Machine Image')]
-rebuild-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag: && (_rebuild-bib target_image tag "qcow2" "image.toml")
-
-# Rebuild a RAW virtual machine image
-[group('Build Virtal Machine Image')]
-rebuild-raw $target_image=("localhost/" + image_name) $tag=default_tag: && (_rebuild-bib target_image tag "raw" "image.toml")
-
-# Rebuild an ISO virtual machine image
-[group('Build Virtal Machine Image')]
-rebuild-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_rebuild-bib target_image tag "iso" "iso.toml")
+    # Build Disk Image
+    {{ podman-remote }} run \
+        --rm \
+        -it \
+        --privileged \
+        --pull=newer \
+        --security-opt label=type:unconfined_t \
+        -v {{ builddir / '$variant-$version' }}/disk.toml:/config.toml:ro \
+        -v {{ builddir / '$variant-$version' }}:/output \
+        -v /var/lib/containers/storage:/var/lib/containers/storage \
+        quay.io/centos-bootc/bootc-image-builder:latest \
+        {{ if env('CI', '') != '' { '--progress verbose' } else { '--progress auto' } }} \
+        --type qcow2 \
+        --use-librepo=True \
+        --rootfs xfs \
+        $fq_name
 
 # Run a virtual machine with the specified image type and configuration
 _run-vm $target_image $tag $type $config:
