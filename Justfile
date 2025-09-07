@@ -155,9 +155,6 @@ build $target_image=image_name $tag=default_tag:
 
     keywords=("bootc" "ostree" "ublue" "universal-blue" "veneos")
     case "$target_image" in
-    "veneos-bootc")
-        keywords+=("cayo" "bootc")
-        ;;
     "veneos-server")
         keywords+=("coreos" "ucore")
         ;;
