@@ -36,10 +36,6 @@ LAYERED_PACKAGES=(
     btop
     bun
     cheat
-    cockpit
-    cockpit-machines
-    cockpit-ostree
-    cockpit-sosreport
     cosign
     devpod
     devpod-desktop

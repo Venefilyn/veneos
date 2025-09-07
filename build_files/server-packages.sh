@@ -7,6 +7,11 @@ set ${SET_X:+-x} -eou pipefail
 
 SERVER_PACKAGES=(
     borgbackup
+    cockpit
+    cockpit-files
+    cockpit-machines
+    cockpit-ostree
+    cockpit-sosreport
     jq
     just
     python3-ramalama
