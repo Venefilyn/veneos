@@ -71,13 +71,13 @@ Based on CoreOS.
 From existing Fedora CoreOS installation, first rebase to one unverified registry
 
 ```bash
-sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/ublue-os/IMAGE:TAG
+sudo bootc switch ghcr.io/venefilyn/veneos-server:TAG
 ```
 
 Now we have the container signatures and can use the signed one
 
 ```bash
-sudo rpm-ostree rebase ostree-image-signed:docker://ghcr.io/ublue-os/IMAGE:TAG
+sudo bootc switch --enforce-container-sigpolicy ghcr.io/venefilyn/veneos-server:TAG
 ```
 
 #### New installation
