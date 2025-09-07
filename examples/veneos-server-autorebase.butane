@@ -8,7 +8,7 @@ passwd:
       password_hash: YOUR_GOOD_PASSWORD_HASH_HERE
 storage:
   directories:
-    - path: /etc/veneos-server-autorebase
+    - path: /etc/veneos/server-autorebase
       mode: 0754
 systemd:
   units:
@@ -17,15 +17,15 @@ systemd:
       contents: |
         [Unit]
         Description=VeneOS Server autorebase to unsigned OCI and reboot
-        ConditionPathExists=!/etc/veneos-server-autorebase/unverified
-        ConditionPathExists=!/etc/veneos-server-autorebase/signed
+        ConditionPathExists=!/etc/veneos/server-autorebase-unverified
+        ConditionPathExists=!/etc/veneos/server-autorebase-signed
         After=network-online.target
         Wants=network-online.target
         [Service]
         Type=oneshot
         StandardOutput=journal+console
-        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-unverified-registry:ghcr.io/venefilyn/veneos-server:stable
-        ExecStart=/usr/bin/touch /etc/veneos-server-autorebase/unverified
+        ExecStart=/usr/bin/bootc switch ghcr.io/venefilyn/veneos-server:stable
+        ExecStart=/usr/bin/touch /etc/veneos/server-autorebase-unverified
         ExecStart=/usr/bin/systemctl disable veneos-server-unsigned-autorebase.service
         ExecStart=/usr/bin/systemctl reboot
         [Install]
@@ -35,15 +35,15 @@ systemd:
       contents: |
         [Unit]
         Description=VeneOS Server autorebase to signed OCI and reboot
-        ConditionPathExists=/etc/veneos-server-autorebase/unverified
-        ConditionPathExists=!/etc/veneos-server-autorebase/signed
+        ConditionPathExists=/etc/veneos/server-autorebase-unverified
+        ConditionPathExists=!/etc/veneos/server-autorebase-signed
         After=network-online.target
         Wants=network-online.target
         [Service]
         Type=oneshot
         StandardOutput=journal+console
-        ExecStart=/usr/bin/rpm-ostree rebase --bypass-driver ostree-image-signed:docker://ghcr.io/venefilyn/veneos-server:stable
-        ExecStart=/usr/bin/touch /etc/veneos-server-autorebase/signed
+        ExecStart=/usr/bin/bootc switch --enforce-container-sigpolicy ghcr.io/venefilyn/veneos-server:stable
+        ExecStart=/usr/bin/touch /etc/veneos/server-autorebase-signed
         ExecStart=/usr/bin/systemctl disable veneos-server-signed-autorebase.service
         ExecStart=/usr/bin/systemctl reboot
         [Install]
