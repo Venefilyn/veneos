@@ -42,7 +42,6 @@ LAYERED_PACKAGES=(
     direnv
     eza
     fira-code-fonts
-    fish
     gh
     ghostty
     gphoto2
@@ -71,7 +70,6 @@ LAYERED_PACKAGES=(
     yq
     yubikey-manager
     zoxide
-    zsh
 )
 dnf5 install --setopt=install_weak_deps=False -y "${LAYERED_PACKAGES[@]}"
 

@@ -12,6 +12,7 @@ SERVER_PACKAGES=(
     cockpit-machines
     cockpit-ostree
     cockpit-sosreport
+    fish
     jq
     just
     python3-ramalama
@@ -19,6 +20,7 @@ SERVER_PACKAGES=(
     tmux
     udica
     yq
+    zsh
 )
 
 dnf5 install --setopt=install_weak_deps=False -y "${SERVER_PACKAGES[@]}"
