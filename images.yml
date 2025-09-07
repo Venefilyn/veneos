@@ -16,10 +16,3 @@ images:
         upstream: stable
       - base: testing
         upstream: testing
-
-  - name: veneos-bootc
-    id: BOOTC
-    image: ghcr.io/ublue-os/cayo
-    mapping:
-      - base: prerelease
-        upstream: fedora

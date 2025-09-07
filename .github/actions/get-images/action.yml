@@ -3,7 +3,7 @@ name: Get images to Build
 description: Get images and variants for building VeneOS
 inputs:
   image_flavor:
-    description: "Types of Image to Build (veneos, veneos-server, veneos-bootc)"
+    description: "Types of Image to Build (veneos, veneos-server)"
     required: true
 outputs:
   image:
@@ -25,9 +25,6 @@ runs:
         "veneos")
           image="ghcr.io/ublue-os/bazzite-gnome"
           ;;
-        "veneos-bootc")
-          image="ghcr.io/ublue-os/cayo"
-          ;;
         "veneos-server")
           image="ghcr.io/ublue-os/ucore-hci"
           ;;
@@ -40,10 +37,6 @@ runs:
       run: |-
         # Array to Hold Image Names
         case "${{ inputs.image_flavor }}" in
-        "veneos-bootc")
-          # variants=("latest")
-          variants=("prerelease")
-          ;;
         *)
           variants=("stable" "testing")
           ;;
