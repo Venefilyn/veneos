@@ -6,6 +6,8 @@
 set ${SET_X:+-x} -eou pipefail
 
 SERVER_PACKAGES=(
+    autoconf
+    automake
     borgbackup
     cockpit
     cockpit-files
