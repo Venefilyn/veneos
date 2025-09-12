@@ -38,6 +38,12 @@ RUN --mount=type=cache,dst=/var/cache \
     --mount=type=cache,dst=/var/log \
     --mount=type=bind,from=ctx,src=/,dst=/ctx \
     --mount=type=tmpfs,dst=/tmp \
+    /ctx/desktop-sysext.sh
+
+RUN --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    --mount=type=tmpfs,dst=/tmp \
     /ctx/just-files.sh
 
 RUN --mount=type=cache,dst=/var/cache \
