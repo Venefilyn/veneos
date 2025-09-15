@@ -1,5 +1,5 @@
 ARG BASE_IMAGE="ghcr.io/ublue-os/bazzite-gnome"
-ARG TAG_VERSION="latest@sha256:c1aeec28026b48a9a02c0c4586a4e78f29f41f9afc7b738b223a0816676e5cc2"
+ARG TAG_VERSION="latest@sha256:50b726bcabfbb2dcd1e358e5835c51447231f1a3ce32b3c478ca6889d2439436"
 
 FROM scratch AS ctx
 COPY build_files cosign.pub /
