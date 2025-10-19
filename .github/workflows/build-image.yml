@@ -91,15 +91,12 @@ jobs:
           # https://linux.die.net/man/1/date
           echo "date=$(date -u +%Y\-%m\-%d\T%H\:%M\:%S\Z)" >> $GITHUB_OUTPUT
 
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
-
       - name: Setup Just
         # yamllint disable-line rule:line-length rule:comments
         uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@faadad0cce49287aee09b3a48701e75088a2c6ad # v4.0.0
+        uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
         if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
 
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
@@ -122,27 +119,23 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         shell: bash
         run: |
-          just=$(which just)
-
-          sudo $just cosign-verify-image "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
+          just cosign-verify-image "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
 
       - name: Build Image
         id: build_image
         env:
           PR_NUMBER: ${{ github.event.number || '0' }}
         run: |
-          just=$(which just)
-
-          sudo $just build "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
+          just build "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
 
       - name: Generate tags
         id: tags
         env:
           PR_NUMBER: ${{ github.event.number || '0' }}
         run: |
-          just=$(which just)
 
-          tags=$(sudo $just generate-build-tags "${{ matrix.variant }}" "${{ env.PR_NUMBER }}")
+
+          tags=$(just generate-build-tags "${{ matrix.variant }}" "${{ env.PR_NUMBER }}")
           echo "tags=$tags" >> $GITHUB_OUTPUT
 
       # Split up image layers
@@ -151,11 +144,10 @@ jobs:
         id: load
         run: |
           set ${SET_X:+-x}
-          just=$(which just)
 
           IMAGE="localhost/${{ steps.image_case.outputs.lowercase }}:${{ matrix.variant }}"
 
-          sudo $just rechunk "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
+          just rechunk "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
 
           IMAGE_DIGEST=$(sudo podman image inspect --format '{{.Digest}}' $IMAGE)
           echo "image=$IMAGE" >> $GITHUB_OUTPUT
@@ -164,8 +156,7 @@ jobs:
       # Tag Images
       - name: Tag Images
         run: |
-          just=$(which just)
-          sudo $just tag-images "${{ steps.image_case.outputs.lowercase }}" \
+          just tag-images "${{ steps.image_case.outputs.lowercase }}" \
                         "${{ matrix.variant }}" \
                         "${{ steps.tags.outputs.tags }}"
 
@@ -193,11 +184,10 @@ jobs:
         shell: bash
         run: |
           set -eou pipefail
-          just=$(which just)
 
-          sudo $just login-to-ghcr ${{ env.ACTOR }} ${{ env.TOKEN }}
+          just login-to-ghcr ${{ env.ACTOR }} ${{ env.TOKEN }}
 
-          digest=$(sudo $just push-to-registry "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}" "${{ steps.tags.outputs.tags }}" "${{ env.IMAGE_REGISTRY }}")
+          digest=$(just push-to-registry "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}" "${{ steps.tags.outputs.tags }}" "${{ env.IMAGE_REGISTRY }}")
 
           echo "digest=$digest" >> $GITHUB_OUTPUT
 
