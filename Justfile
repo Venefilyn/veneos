@@ -402,34 +402,6 @@ format:
 update-flatpaks:
     flatpak list --columns application --app > ./repo_files/flatpaks
 
-# Get Cosign if Needed
-[group('CI')]
-install-cosign:
-    #!/usr/bin/bash
-    set ${SET_X:+-x} -euo pipefail
-
-    # Get Cosign from Chainguard
-    if ! command -v cosign >/dev/null; then
-        # TMPDIR
-        TMPDIR="$(mktemp -d)"
-        trap 'rm -rf $TMPDIR' EXIT SIGINT
-
-        # Get Binary
-        COSIGN_CONTAINER_ID="$(podman create {{ cosign-installer }} bash)"
-        podman cp "${COSIGN_CONTAINER_ID}":/usr/bin/cosign "$TMPDIR"/cosign
-        podman rm -f "${COSIGN_CONTAINER_ID}"
-        podman rmi -f {{ cosign-installer }}
-
-        # Install
-        {{ just }} sudoif install -c -m 0755 "$TMPDIR"/cosign /usr/local/bin/cosign
-
-        # Verify Cosign Image Signatures if needed
-        if ! cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com --certificate-identity=https://github.com/chainguard-images/images/.github/workflows/release.yaml@refs/heads/main cgr.dev/chainguard/cosign >/dev/null; then
-            echo "NOTICE: Failed to verify cosign image signatures."
-            exit 1
-        fi
-    fi
-
 # Install Syft
 [group('CI')]
 install-syft:
@@ -454,7 +426,7 @@ install-syft:
 
 # Get Cosign if Needed
 [group('CI')]
-cosign-verify-image $target_image=image_name $tag=default_tag $key="./build_files/ublue.pub": install-cosign
+cosign-verify-image $target_image=image_name $tag=default_tag $key="./build_files/ublue.pub":
     #!/usr/bin/env bash
     set ${SET_X:+-x} -eou pipefail
 
@@ -491,7 +463,7 @@ gen-sbom $input $output="": install-syft
 
 # Add SBOM Signing
 [group('CI')]
-sbom-sign input $sbom="": install-cosign
+sbom-sign input $sbom="":
     #!/usr/bin/bash
     set ${SET_X:+-x} -eou pipefail
 
@@ -523,7 +495,7 @@ sbom-sign input $sbom="": install-cosign
 
 # SBOM Attest
 [group('CI')]
-sbom-attest input $sbom="" $destination="": install-cosign
+sbom-attest input $sbom="" $destination="":
     #!/usr/bin/bash
     set ${SET_X:+-x} -eou pipefail
 
