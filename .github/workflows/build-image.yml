@@ -208,4 +208,4 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
         run: |
           IMAGE_FULL="${{ steps.registry_case.outputs.lowercase }}/${{ steps.image_case.outputs.lowercase }}"
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY $IMAGE_FULL@${{ env.DIGEST }}
+          cosign sign -y  --key env://COSIGN_PRIVATE_KEY --new-bundle-format=false $IMAGE_FULL@${{ env.DIGEST }}

@@ -19,7 +19,7 @@ alias run-vm := run-vm-qcow2
 [private]
 rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.4@sha256:8a84bd5a029681aa8db523f927b7c53b5aded9b078b81605ac0a2fedc969f528"
 [private]
-cosign-installer := "ghcr.io/sigstore/cosign/cosign:v2"
+cosign-installer := "ghcr.io/sigstore/cosign/cosign:v2.4.1"
 [private]
 syft-installer := "ghcr.io/anchore/syft:v1.36.0@sha256:6733fa6ba7fb102d5b8eecae0e9ee7ee7091e613b8ce8d1fc9e6641335ab3962"
 
@@ -416,7 +416,7 @@ install-cosign:
 
         # Get Binary
         COSIGN_CONTAINER_ID="$(podman create {{ cosign-installer }} bash)"
-        podman cp "${COSIGN_CONTAINER_ID}":/usr/bin/cosign "$TMPDIR"/cosign
+        podman cp "${COSIGN_CONTAINER_ID}":/ko-app/cosign "$TMPDIR"/cosign
         podman rm -f "${COSIGN_CONTAINER_ID}"
         podman rmi -f {{ cosign-installer }}
 
