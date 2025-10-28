@@ -132,14 +132,24 @@ jobs:
 
           sudo $just build "${{ steps.image_case.outputs.lowercase }}" "${{ matrix.variant }}"
 
+      - name: Get Fedora version
+        if: inputs.image != 'veneos-server'
+        id: fedora
+        shell: bash
+        run: |
+          just=$(which just)
+
+          echo "version=$(sudo $just image-baseos-version "${{ inputs.image }}" "${{ matrix.variant }}" | jq --compact-output)" >> "$GITHUB_OUTPUT"
+
       - name: Generate tags
         id: tags
         env:
           PR_NUMBER: ${{ github.event.number || '0' }}
+          FEDORA_VERSION: ${{ steps.fedora.outputs.version }}
         run: |
           just=$(which just)
 
-          tags=$(sudo $just generate-build-tags "${{ matrix.variant }}" "${{ env.PR_NUMBER }}")
+          tags=$(sudo $just generate-build-tags "${{ matrix.variant }}" "${{ env.PR_NUMBER }}" "${{ env.FEDORA_VERSION }}")
           echo "tags=$tags" >> $GITHUB_OUTPUT
 
       # Split up image layers
