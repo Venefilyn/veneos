@@ -29,9 +29,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image_flavor: ["veneos", "veneos-server"]
+        image:
+          - veneos
+          - veneos-server
     with:
-      image_flavor: ${{ matrix.image_flavor }}
+      image: ${{ matrix.image }}
 
   # build-iso:
   #   name: Build ISOs
@@ -45,9 +47,9 @@ jobs:
   #   strategy:
   #     fail-fast: false
   #     matrix:
-  #       image_flavor: ["veneos", "veneos-server"]
+  #       image: ["veneos", "veneos-server"]
   #   with:
-  #     image_flavor: ${{ matrix.image_flavor }}
+  #     image: ${{ matrix.image }}
 
   # gen-sbom:
   #   name: Generate SBOMs
@@ -64,9 +66,9 @@ jobs:
   #   strategy:
   #     fail-fast: false
   #     matrix:
-  #       image_flavor: ["veneos", "veneos-server"]
+  #       image: ["veneos", "veneos-server"]
   #   with:
-  #     image_flavor: ${{ matrix.image_flavor }}
+  #     image: ${{ matrix.image }}
 
   # changelogs:
   #   name: Generate Changelogs
@@ -105,9 +107,9 @@ jobs:
   #   strategy:
   #     fail-fast: false
   #     matrix:
-  #       image_flavor: ["veneos", "veneos-server"]
+  #       image: ["veneos", "veneos-server"]
   #   with:
-  #     image_flavor: ${{ matrix.image_flavor }}
+  #     image: ${{ matrix.image }}
 
   # build-iso-beta:
   #   name: Build Beta ISOs
@@ -121,6 +123,6 @@ jobs:
   #   strategy:
   #     fail-fast: false
   #     matrix:
-  #       image_flavor: ["veneos", "veneos-server"]
+  #       image: ["veneos", "veneos-server"]
   #   with:
-  #     image_flavor: ${{ matrix.image_flavor }}
+  #     image: ${{ matrix.image }}
