@@ -3,7 +3,7 @@ name: Build VeneOS image
 on:
   workflow_dispatch:
     inputs:
-      image_flavor:
+      image:
         description: "The image to build"
         type: choice
         options:
@@ -12,7 +12,7 @@ on:
         default: "veneos"
   workflow_call:
     inputs:
-      image_flavor:
+      image:
         type: string
     secrets:
       SIGNING_SECRET:
@@ -26,7 +26,7 @@ env:
   SET_X: 1
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.image_flavor }}
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.image }}
   cancel-in-progress: true
 
 jobs:
@@ -51,10 +51,10 @@ jobs:
         run: |
           just=$(which just)
 
-          echo "variants=$(sudo $just image-flavors "${{ inputs.image_flavor }}" | jq --compact-output)" >> "$GITHUB_OUTPUT"
+          echo "variants=$(sudo $just image-flavors "${{ inputs.image }}" | jq --compact-output)" >> "$GITHUB_OUTPUT"
 
   build_push:
-    name: Build ${{ inputs.image_flavor }}:${{ matrix.variant }} image and publish
+    name: Build ${{ inputs.image }}:${{ matrix.variant }} image and publish
     needs: get-variants
     runs-on: ubuntu-latest
 
@@ -111,7 +111,7 @@ jobs:
         id: image_case
         uses: ASzc/change-string-case-action@d0603cd0a7dd490be678164909f65c7737470a7f # v6
         with:
-          string: ${{ inputs.image_flavor }}
+          string: ${{ inputs.image }}
 
       # Verify the container image and if it fails, we just don't push this at all
       # Something is up and we need to manually check
@@ -179,7 +179,7 @@ jobs:
           oras push \
             ghcr.io/${{ steps.registry_case.outputs.lowercase }}/${{ steps.image_case.outputs.lowercase }}:artifacthub.io \
             --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
-            artifacthub-${{ inputs.image_flavor }}-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
+            artifacthub-${{ inputs.image }}-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
 
       - name: Push To GHCR
         id: push
