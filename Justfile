@@ -5,7 +5,7 @@ export repo_image_name := lowercase(repo_organization) / lowercase(image_name)
 export repo_owner_id := "6598829"
 export IMAGE_REGISTRY := "ghcr.io" / repo_image_name
 export centos_version := env("CENTOS_VERSION", "stream10")
-export fedora_version := env("CENTOS_VERSION", "42")
+export fedora_version := env("FEDORA_VERSION", "42")
 export default_tag := env("DEFAULT_TAG", "latest")
 export bib_image := env("BIB_IMAGE", "quay.io/centos-bootc/bootc-image-builder:latest")
 export images := env("IMAGES", "$(yq '.images' images.yml)")
@@ -192,6 +192,22 @@ image-flavors $target_image=image_name:
     fi
 
     echo $base_tags
+
+# Build the image using the specified parameters
+image-baseos-version $target_image=image_name $base=default_tag:
+    #!/usr/bin/env bash
+    set ${SET_X:+-x} -eou pipefail
+
+    {{ ci_grouping }}
+
+    # Verify that the image to build exists
+    baseos_version=$(echo "{{ images }}" | yq -o json ".[] | select(.name == \"$target_image\") | .mapping | filter(.base == \"$base\") | .[].baseos-version")
+    if [[ "${baseos_version}" == "null" ]]; then
+        echo "Possible typo. The baseos version '$base' did not exist on '$target_image' image in 'images.yml'."
+        exit 1
+    fi
+
+    echo $baseos_version
 
 # Command: _rootful_load_image
 # Description: This script checks if the current user is root or running under sudo. If not, it attempts to resolve the image tag using podman inspect.
@@ -568,7 +584,7 @@ sbom-attest input $sbom="" $destination="": install-cosign
 
 # Generate Tags
 [group('Utility')]
-generate-build-tags $tag=default_tag $github_number="0":
+generate-build-tags $tag=default_tag $github_number="0" $base_version="":
     #!/usr/bin/env bash
     set ${SET_X:+-x} -eou pipefail
 
@@ -583,6 +599,9 @@ generate-build-tags $tag=default_tag $github_number="0":
             TAGS+=("latest")
         fi
         TAGS+=("${tag}" "${tag}.${DATE}")
+        if [[ -n "${base_version:-}" ]]; then
+            TAGS+=("${base_version}" "${tag}.${base_version}" "${tag}.${base_version}.${DATE}")
+        fi
     fi
 
     echo "${TAGS[@]}"
