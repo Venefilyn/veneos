@@ -35,5 +35,16 @@
         'pinDigest',
       ],
     },
+    {
+      matchManagers: [
+        'jsonata',
+      ],
+      matchUpdateTypes: ["digest", "pinDigest", "pin"],
+      matchDepTypes: ["container"],
+      matchFileNames: ["images.yml"],
+      matchStrings: [
+        'images.$map(mapping.upstream, function($v, $k, $a) { { "currentValue": $v, "depName": $.image } })'
+      ]
+    },
   ],
 }
