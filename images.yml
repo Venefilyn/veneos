@@ -18,5 +18,7 @@ images:
     mapping:
       - base: stable
         upstream: stable
+        upstreamDigest: sha256:14bd0f1747f6352916af2de3e13c2a73d8949ed43277cfdcef13e02e0c82b64c
       - base: testing
         upstream: testing
+        upstreamDigest: sha256:77e23fdd988e29c6ce8c041691a09ddf36b230dd00813153937ceead44923ee0
