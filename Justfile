@@ -126,6 +126,11 @@ build $target_image=image_name $tag=default_tag:
         echo "Possible typo. The image '$target_image' did have a tag mapping for '$tag' in 'images.yml'."
         exit 1
     fi
+    upstream_digest=$(echo "$image" | yq ".mapping[] | select(.base == \"${tag}\") | .upstreamDigest")
+    if [[ "${upstream_digest}" != "null" ]]; then
+        upstream_tag+="@$upstream_digest"
+    fi
+
 
     if [[ -v CI ]]; then
         BUILD_ARGS+=("--cpp-flag" "-DGHCI")
