@@ -43,7 +43,7 @@
       matchDepTypes: ["container"],
       matchFileNames: ["images.yml"],
       matchStrings: [
-        'images.$map(mapping.upstream, function($v, $k, $a) { { "currentValue": $v, "depName": $.image } })'
+        'images.$map(mapping, function($v, $k, $a) { { "currentValue": $v.upstream, "currentDigest": $v.upstreamDigest, "depName": $.image } })'
       ]
     },
   ],

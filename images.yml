@@ -4,10 +4,12 @@ images:
     image: ghcr.io/ublue-os/bazzite-gnome
     mapping:
       - base: stable
-        upstream: 42
-        baseos-version: 42
+        upstream: stable
+        upstreamDigest: sha256:daada2e6c79fb3b760344d2bcdb2c7775313404deced6c4b14a84dea7cdffe00
+        baseos-version: 43
       - base: testing
         upstream: testing
+        upstreamDigest: sha256:95b10a1b585afb322146870151823603a57011e4a3374c93e9da58bd141e9047
         baseos-version: 43
 
   - name: veneos-server
