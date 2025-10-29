@@ -14,6 +14,17 @@
       ],
       datasourceTemplate: 'docker',
     },
+    {
+      customType: "jsonata",
+      managerFilePatterns: [
+        "/^images.ya?ml$/",
+      ],
+      fileFormat: "yaml",
+      datasourceTemplate: "docker",
+      matchStrings: [
+        'images.$map(mapping, function($v, $k, $a) { { "currentValue": $v.upstream, "currentDigest": $v.upstreamDigest, "depName": $.image } })'
+      ]
+    }
   ],
   packageRules: [
     {
@@ -34,17 +45,6 @@
         'digest',
         'pinDigest',
       ],
-    },
-    {
-      matchManagers: [
-        'jsonata',
-      ],
-      matchUpdateTypes: ["digest", "pinDigest", "pin"],
-      matchDepTypes: ["container"],
-      matchFileNames: ["images.yml"],
-      matchStrings: [
-        'images.$map(mapping, function($v, $k, $a) { { "currentValue": $v.upstream, "currentDigest": $v.upstreamDigest, "depName": $.image } })'
-      ]
-    },
+    }
   ],
 }
