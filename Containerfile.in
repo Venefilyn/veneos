@@ -59,6 +59,12 @@ RUN --mount=type=cache,dst=/var/cache \
     --mount=type=tmpfs,dst=/tmp \
     /ctx/overrides.sh
 
+RUN --mount=type=cache,dst=/var/cache \
+    --mount=type=cache,dst=/var/log \
+    --mount=type=bind,from=ctx,src=/,dst=/ctx \
+    --mount=type=tmpfs,dst=/tmp \
+    /ctx/remove-cliwrap.sh
+
 RUN --mount=type=bind,from=ctx,src=/,dst=/ctx \
     /ctx/cleanup.sh
 
