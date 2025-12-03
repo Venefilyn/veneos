@@ -66,6 +66,7 @@ LAYERED_PACKAGES=(
     sqlite
     starship
     thefuck
+    uv
     virt-install
     yarnpkg
     yq
