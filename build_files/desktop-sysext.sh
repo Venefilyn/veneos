@@ -1,5 +1,9 @@
 #!/usr/bin/bash
 
+# Create sysext dirs
+mkdir -p /etc/extensions /run/extensions /var/lib/extensions
+
+# Create sysupdate dir
 mkdir -p /usr/lib/sysupdate.d
 
 SYSEXTS_TRAVIER=(
