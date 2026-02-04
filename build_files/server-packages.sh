@@ -14,6 +14,7 @@ SERVER_PACKAGES=(
     cockpit-machines
     cockpit-ostree
     cockpit-sosreport
+    fastfetch
     fish
     jq
     just
