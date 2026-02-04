@@ -5,11 +5,11 @@ images:
     mapping:
       - base: stable
         upstream: stable
-        upstreamDigest: sha256:daada2e6c79fb3b760344d2bcdb2c7775313404deced6c4b14a84dea7cdffe00
+        upstreamDigest: sha256:8016999a035c69e42b8462c84356559e24258ce8081e814010eb73c8b0b9ddd6
         baseos-version: 43
       - base: testing
         upstream: testing
-        upstreamDigest: sha256:95b10a1b585afb322146870151823603a57011e4a3374c93e9da58bd141e9047
+        upstreamDigest: sha256:8f4fc0c511dd701c29691813b20d2fbbf674b1b7de49022acf786e7d831b4624
         baseos-version: 43
 
   - name: veneos-server
@@ -18,7 +18,7 @@ images:
     mapping:
       - base: stable
         upstream: stable
-        upstreamDigest: sha256:14bd0f1747f6352916af2de3e13c2a73d8949ed43277cfdcef13e02e0c82b64c
+        upstreamDigest: sha256:cc9815cdfd737fdaf3f92f26f05c17597d8a31d10f95b2e7082c485584a4fb75
       - base: testing
         upstream: testing
-        upstreamDigest: sha256:77e23fdd988e29c6ce8c041691a09ddf36b230dd00813153937ceead44923ee0
+        upstreamDigest: sha256:be7e969d1f7a972ec6cf74b60d4eb1d8c34db32e2fc50b3ccf24689d46dc8429
