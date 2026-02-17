@@ -57,7 +57,6 @@ LAYERED_PACKAGES=(
     nodejs-npm
     pnpm
     podlet
-    podman-compose
     podman-remote
     pre-commit
     rbw

@@ -17,6 +17,9 @@ SERVER_PACKAGES=(
     fish
     jq
     just
+    podman
+    podman-compose
+    podman-gvproxy
     python3-ramalama
     skopeo
     tmux
