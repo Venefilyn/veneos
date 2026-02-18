@@ -19,7 +19,7 @@ SERVER_PACKAGES=(
     just
     podman
     podman-compose
-    podman-gvproxy
+    podman-machine
     python3-ramalama
     skopeo
     tmux
