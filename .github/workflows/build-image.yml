@@ -43,7 +43,7 @@ jobs:
 
       - name: Setup Just
         # yamllint disable-line rule:line-length rule:comments
-        uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+        uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3
 
       - name: Get variants
         id: variants
@@ -88,7 +88,7 @@ jobs:
 
       - name: Setup Just
         # yamllint disable-line rule:line-length rule:comments
-        uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+        uses: extractions/setup-just@f8a3cce218d9f83db3a2ecd90e41ac3de6cdfd9b # v3
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@7e8b541eb2e61bf99390e1afd4be13a184e9ebc5 # v3.10.1
