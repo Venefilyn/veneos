@@ -22,6 +22,9 @@ for repo in "${COPR_REPOS[@]}"; do
     dnf5 -y copr enable "$repo"
 done
 
+log "Import Cider Collective RPM key"
+rpm --import /usr/share/veneos/RPM-GPG-KEY-CIDER-COLLECTIVE
+
 # Bazzite disabled this for some reason so lets re-enable it again
 dnf5 config-manager setopt terra.enabled=1 terra-extras.enabled=1
 
@@ -36,6 +39,7 @@ LAYERED_PACKAGES=(
     btop
     bun
     cheat
+    Cider
     cosign
     devpod
     devpod-desktop
@@ -79,6 +83,10 @@ log "Disable Copr repos as we do not need it anymore"
 for repo in "${COPR_REPOS[@]}"; do
     dnf5 -y copr disable "$repo"
 done
+
+log "Disable Cider Collective repo"
+dnf5 config-manager setopt cidercollective.enabled=0
+
 # Use flatpak steam with some addons instead
 # rpm-ostree override remove steam
 log "Removing Steam from Bazzite install, please use flatpak instead"
