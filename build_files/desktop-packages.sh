@@ -48,6 +48,7 @@ LAYERED_PACKAGES=(
     fira-code-fonts
     gh
     ghostty
+    git-credential-libsecret
     gphoto2
     grc
     helix
