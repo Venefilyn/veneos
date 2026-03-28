@@ -18,6 +18,7 @@ SERVER_PACKAGES=(
     fish
     jq
     just
+    pcp
     podman
     podman-compose
     podman-machine
