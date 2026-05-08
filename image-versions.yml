@@ -1,0 +1,35 @@
+images:
+  - &bazzite
+    name: bazzite-gnome-stable
+    image: ghcr.io/ublue-os/bazzite-gnome
+    tag: stable-44
+    digest: sha256:8016999a035c69e42b8462c84356559e24258ce8081e814010eb73c8b0b9ddd6
+
+  - &bazzite-testing
+    name: bazzite-gnome-testing
+    image: ghcr.io/ublue-os/bazzite-gnome
+    tag: testing-44
+    digest: sha256:8f4fc0c511dd701c29691813b20d2fbbf674b1b7de49022acf786e7d831b4624
+
+  - &ucore
+    name: ucore-hci-stable
+    image: ghcr.io/ublue-os/ucore-hci
+    tag: stable
+    digest: sha256:cc9815cdfd737fdaf3f92f26f05c17597d8a31d10f95b2e7082c485584a4fb75
+
+  - &ucore-testing
+    name: ucore-hci-testing
+    image: ghcr.io/ublue-os/ucore-hci
+    tag: testing
+    digest: sha256:be7e969d1f7a972ec6cf74b60d4eb1d8c34db32e2fc50b3ccf24689d46dc8429
+
+veneos:
+  - tag: stable
+    upstream: *bazzite
+  - tag: testing
+    upstream: *bazzite-testing
+veneos-server:
+  - tag: stable
+    upstream: *ucore
+  - tag: testing
+    upstream: *ucore-testing
