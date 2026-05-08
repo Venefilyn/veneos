@@ -29,6 +29,10 @@
   packageRules: [
     {
       automerge: true,
+      matchUpdateTypes: ["pin", "pinDigest"]
+    },
+    {
+      automerge: true,
       groupName: 'Build Containers',
       matchPackageNames: [
         'cgr.dev/chainguard/cosign',
