@@ -14,17 +14,6 @@
       ],
       datasourceTemplate: 'docker',
     },
-    {
-      customType: "jsonata",
-      managerFilePatterns: [
-        "/^images.ya?ml$/",
-      ],
-      fileFormat: "yaml",
-      datasourceTemplate: "docker",
-      matchStrings: [
-        'images.$map(mapping, function($v, $k, $a) { { "currentValue": $v.upstream, "currentDigest": $v.upstreamDigest, "depName": $.image } })'
-      ]
-    }
   ],
   packageRules: [
     {
