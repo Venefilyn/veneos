@@ -8,7 +8,6 @@ export centos_version := env("CENTOS_VERSION", "stream10")
 export fedora_version := env("FEDORA_VERSION", "42")
 export default_tag := env("DEFAULT_TAG", "latest")
 export bib_image := env("BIB_IMAGE", "quay.io/centos-bootc/bootc-image-builder:latest")
-export images := env("IMAGES", "$(yq '.images' images.yml)")
 
 alias build-vm := build-qcow2
 alias rebuild-vm := rebuild-qcow2
@@ -16,6 +15,13 @@ alias run-vm := run-vm-qcow2
 
 # Build Containers
 
+
+[private]
+GIT_ROOT := justfile_dir()
+[private]
+image-file := GIT_ROOT / "image-versions.yml"
+
+# TODO: Move to image-versions
 [private]
 rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.4@sha256:8a84bd5a029681aa8db523f927b7c53b5aded9b078b81605ac0a2fedc969f528"
 [private]
@@ -89,19 +95,18 @@ sudoif command *args:
 # This Justfile recipe builds a container image using Podman.
 #
 # Arguments:
-#   $target_image - The tag you want to apply to the image (default: aurora).
-#   $tag - The tag for the image (default: lts).
-#   $base_tag - The underlying tag for the image (default: $tag).
+#   $target_image - The tag you want to apply to the image (default: veneos).
+#   $tag - The tag for the image (default: latest).
 #
 # The script constructs the version string using the tag and the current date.
 # If the git working directory is clean, it also includes the short SHA of the current HEAD.
 #
-# just build $target_image $tag $base_tag
+# just build $target_image $tag
 #
 # Example usage:
-#   just build veneos testing 1 1
+#   just build veneos testing
 #
-# This will build an image 'aurora:lts' with DX and GDX enabled.
+# This will build an image 'veneos:testing'.
 #
 
 # Build the image using the specified parameters
@@ -114,31 +119,29 @@ build $target_image=image_name $tag=default_tag:
     BUILD_ARGS=()
 
     # Verify that the image to build exists
-    image=$(echo "{{ images }}" | yq ".[] | select(.name == \"$target_image\")")
+    image=$(yq -r ".${target_image}[] | select(.tag == \"${tag}\") | explode(.upstream)" {{ image-file }})
     if [[ -z $image ]]; then
-        echo "Possible typo. The image '$target_image' did not exist in 'images.yml'."
+        echo "Possible typo. The image '$target_image' did not exist in 'image-versions.yml'."
         exit 1
     fi
 
-    # Verify that the tag has a corresponding mapping for the upstream base
-    upstream_tag=$(echo "$image" | yq ".mapping[] | select(.base == \"${tag}\") | .upstream")
-    if [[ -z $upstream_tag ]]; then
-        echo "Possible typo. The image '$target_image' did have a tag mapping for '$tag' in 'images.yml'."
-        exit 1
-    fi
-    upstream_digest=$(echo "$image" | yq ".mapping[] | select(.base == \"${tag}\") | .upstreamDigest")
-    if [[ "${upstream_digest}" != "null" ]]; then
-        upstream_tag+="@$upstream_digest"
-    fi
-
+    upstream_image=$(echo "$image" | yq ".upstream.image ")
+    upstream_tag=$(echo "$image" | yq ".upstream | \"\\(.tag)@\\(.digest)\"")
 
     if [[ -v CI ]]; then
         BUILD_ARGS+=("--cpp-flag" "-DGHCI")
     fi
     BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
     BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
-    BUILD_ARGS+=("--build-arg" "BASE_IMAGE=$(echo "$image" | yq '.image')")
-    BUILD_ARGS+=("--cpp-flag" "-D$(echo "$image" | yq '.id')")
+    BUILD_ARGS+=("--build-arg" "BASE_IMAGE=${upstream_image}")
+    case "$target_image" in
+    "veneos")
+        BUILD_ARGS+=("--cpp-flag" "-DBAZZITE")
+        ;;
+    "veneos-server")
+        BUILD_ARGS+=("--cpp-flag" "-DSERVER")
+        ;;
+    esac
     BUILD_ARGS+=("--build-arg" "TAG_VERSION=$upstream_tag")
     if [[ -z "$(git status -s)" ]]; then
         BUILD_ARGS+=("--build-arg" "SHA_HEAD_SHORT=$(git rev-parse --short HEAD)")
@@ -160,11 +163,11 @@ build $target_image=image_name $tag=default_tag:
 
     keywords=("bootc" "ostree" "ublue" "universal-blue" "veneos")
     case "$target_image" in
-    "veneos-server")
-        keywords+=("coreos" "ucore")
-        ;;
     "veneos")
         keywords+=("bazzite")
+        ;;
+    "veneos-server")
+        keywords+=("coreos" "ucore")
         ;;
     esac
     LABELS+=("--label" "io.artifacthub.package.keywords=$(IFS=, ; echo "${keywords[*]}")")
@@ -190,9 +193,9 @@ image-flavors $target_image=image_name:
     {{ ci_grouping }}
 
     # Verify that the image to build exists
-    base_tags=$(echo "{{ images }}" | yq -o json ".[] | select(.name == \"$target_image\") | [.mapping[].base]")
+    base_tags=$(yq -o json -r "[.${target_image}[].tag]" {{ image-file }})
     if [[ -z $base_tags ]]; then
-        echo "Possible typo. The image '$target_image' did not exist in 'images.yml'."
+        echo "Possible typo. The image '$target_image' did not exist in 'image-versions.yml'."
         exit 1
     fi
 
@@ -206,9 +209,9 @@ image-baseos-version $target_image=image_name $base=default_tag:
     {{ ci_grouping }}
 
     # Verify that the image to build exists
-    baseos_version=$(echo "{{ images }}" | yq -o json ".[] | select(.name == \"$target_image\") | .mapping | filter(.base == \"$base\") | .[].baseos-version")
+    baseos_version=$(yq -r ".${target_image}[] | select(.tag == \"${base}\") | .upstream | explode(.) | .tag | split(\"-\").[1]" {{ image-file }})
     if [[ "${baseos_version}" == "null" ]]; then
-        echo "Possible typo. The baseos version '$base' did not exist on '$target_image' image in 'images.yml'."
+        echo "Possible typo. The baseos version '$base' did not exist on '$target_image' image in 'image-versions.yml'."
         exit 1
     fi
 
@@ -481,11 +484,11 @@ cosign-verify-image $target_image=image_name $tag=default_tag $key="./build_file
 
     {{ ci_grouping }}
 
-    image=$(echo "{{ images }}" | yq ".[] | select(.name == \"$target_image\")")
-    upstream_image=$(echo "$image" | yq ".image")
-    upstream_tag=$(echo "$image" | yq ".mapping[] | select(.base == \"${tag}\") | .upstream")
+    image=$(yq -r ".${target_image}[] | select(.tag == \"${tag}\") | explode(.upstream)" {{ image-file }})
+    upstream_image=$(echo "$image" | yq ".upstream.image")
+    upstream_tag=$(echo "$image" | yq ".upstream | \"\\(.tag)@\\(.digest)\"")
     if [[ -z $upstream_tag ]]; then
-        echo "Possible typo. The image '$target_image' did have a tag mapping for '$tag' in 'images.yml'."
+        echo "Possible typo. The image '$target_image' did have a tag mapping for '$tag' in 'image-versions.yml'."
         exit 1
     fi
 
