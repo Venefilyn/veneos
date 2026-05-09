@@ -16,7 +16,7 @@ log "Installing RPM packages"
 log "Enable Copr repos"
 
 COPR_REPOS=(
-    pgdev/ghostty
+    scottames/ghostty
 )
 for repo in "${COPR_REPOS[@]}"; do
     dnf5 -y copr enable "$repo"
