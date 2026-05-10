@@ -6,31 +6,31 @@
 set ${SET_X:+-x} -eou pipefail
 
 SERVER_PACKAGES=(
-    autoconf
-    automake
-    borgbackup
-    cockpit
-    cockpit-files
-    cockpit-machines
-    cockpit-ostree
-    cockpit-sosreport
-    fastfetch
-    fish
-    jq
-    just
-    podman
-    podman-compose
-    podman-machine
-    python3-ramalama
-    skopeo
-    tmux
-    udica
-    yq
-    zsh
+  autoconf
+  automake
+  borgbackup
+  cockpit
+  cockpit-files
+  cockpit-machines
+  cockpit-ostree
+  cockpit-sosreport
+  fastfetch
+  fish
+  jq
+  just
+  podman
+  podman-compose
+  podman-machine
+  ramalama
+  skopeo
+  tmux
+  udica
+  yq
+  zsh
 )
 
 dnf5 install --setopt=install_weak_deps=False -y "${SERVER_PACKAGES[@]}"
 
 # The superior default editor
 dnf5 swap -y \
-    nano-default-editor vim-default-editor
+  nano-default-editor vim-default-editor
