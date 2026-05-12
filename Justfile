@@ -605,10 +605,13 @@ generate-build-tags $tag=default_tag $github_number="0" $base_version="":
     else
         if [[ $tag == stable ]]; then
             TAGS+=("latest")
+            if [[ -n "${base_version:-}" ]]; then
+                TAGS+=("${base_version}")
+            fi
         fi
         TAGS+=("${tag}" "${tag}.${DATE}")
         if [[ -n "${base_version:-}" ]]; then
-            TAGS+=("${base_version}" "${tag}.${base_version}" "${tag}.${base_version}.${DATE}")
+            TAGS+=("${tag}.${base_version}" "${tag}.${base_version}.${DATE}")
         fi
     fi
 
