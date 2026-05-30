@@ -53,6 +53,7 @@ LAYERED_PACKAGES=(
     grc
     helix
     krb5-workstation
+    libheif
     libinput-devel
     libva-utils
     libvirt vagrant
