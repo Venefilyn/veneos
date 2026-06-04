@@ -61,6 +61,7 @@ LAYERED_PACKAGES=(
     neovim
     nodejs
     nodejs-npm
+    pipx
     pnpm
     podlet
     podman-remote
