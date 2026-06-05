@@ -6,7 +6,7 @@ export repo_owner_id := "6598829"
 export IMAGE_REGISTRY := "ghcr.io" / repo_image_name
 export centos_version := env("CENTOS_VERSION", "stream10")
 export fedora_version := env("FEDORA_VERSION", "42")
-export default_tag := env("DEFAULT_TAG", "latest")
+export default_tag := env("DEFAULT_TAG", "stable")
 export bib_image := env("BIB_IMAGE", "quay.io/centos-bootc/bootc-image-builder:latest")
 
 alias build-vm := build-qcow2

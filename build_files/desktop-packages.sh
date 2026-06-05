@@ -22,63 +22,92 @@ for repo in "${COPR_REPOS[@]}"; do
     dnf5 -y copr enable "$repo"
 done
 
-log "Import Cider Collective RPM key"
-rpm --import /usr/share/veneos/RPM-GPG-KEY-CIDER-COLLECTIVE
-
-# Bazzite disabled this for some reason so lets re-enable it again
-dnf5 config-manager setopt terra.enabled=1 terra-extras.enabled=1
-
 log "Install layered applications"
 
 # Layered Applications
 LAYERED_PACKAGES=(
-    ansible
-    atuin
-    bat
     borgbackup
     btop
-    bun
-    cheat
-    Cider
     cosign
-    devpod
-    devpod-desktop
     direnv
-    eza
     fira-code-fonts
     gh
-    ghostty
     git-credential-libsecret
     gphoto2
-    grc
-    helix
     krb5-workstation
-    libheif
     libinput-devel
     libva-utils
-    libvirt vagrant
     lld
-    neovim
-    nodejs
-    nodejs-npm
     pipx
-    pnpm
     podlet
     podman-remote
     pre-commit
     rbw
     rclone
-    ripgrep
     sqlite
-    starship
-    thefuck
     uv
     virt-install
-    yarnpkg
     yq
     yubikey-manager
     zoxide
 )
+
+# General devel
+LAYERED_PACKAGES+=(
+    @development-tools
+    ansible
+    nodejs
+    nodejs-npm
+    pnpm
+    yarnpkg
+)
+
+# Editors
+LAYERED_PACKAGES+=(
+    helix
+    neovim
+)
+
+# Virtualization
+LAYERED_PACKAGES+=(
+    libvirt
+    vagrant
+)
+
+# Terminal helpers
+LAYERED_PACKAGES+=(
+    atuin
+    bat
+    cheat
+    grc
+    ripgrep
+    thefuck
+)
+
+# iPhone camera work
+LAYERED_PACKAGES+=(
+    libheif
+)
+
+# Terra
+# Bazzite disabled this due to being unstable so lets re-enable it again
+dnf5 config-manager setopt terra.enabled=1 terra-extras.enabled=1
+LAYERED_PACKAGES+=(
+    bun
+    devpod
+    devpod-desktop
+    eza
+    ghostty
+    starship
+)
+
+# Cider music app
+log "Import Cider Collective RPM key"
+rpm --import /usr/share/veneos/RPM-GPG-KEY-CIDER-COLLECTIVE
+LAYERED_PACKAGES+=(
+    Cider
+)
+
 dnf5 install --setopt=install_weak_deps=False -y "${LAYERED_PACKAGES[@]}"
 
 log "Disable Copr repos as we do not need it anymore"
