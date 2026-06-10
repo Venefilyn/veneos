@@ -33,6 +33,7 @@ LAYERED_PACKAGES=(
     fira-code-fonts
     gh
     git-credential-libsecret
+    git-lfs
     gphoto2
     krb5-workstation
     libinput-devel
