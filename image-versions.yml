@@ -21,7 +21,7 @@ images:
     name: ucore-hci-testing
     image: ghcr.io/ublue-os/ucore-hci
     tag: testing
-    digest: sha256:c4ee5e9e8446df5e3da95251db328e5b78d6409c7eec1cf0e667190675d4fe90
+    digest: sha256:5e2dcfab72bd77d55f69b69b7954b42c605ae0bddc052166b04612fc19500f27
 
 veneos:
   - tag: stable
