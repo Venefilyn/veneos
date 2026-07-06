@@ -14,6 +14,7 @@ export bib_image := env("BIB_IMAGE", "quay.io/centos-bootc/bootc-image-builder:l
 alias build-vm := build-qcow2
 alias rebuild-vm := rebuild-qcow2
 alias run-vm := run-vm-qcow2
+alias gen-sbom := sbom-gen
 
 # Build Containers
 
@@ -28,7 +29,9 @@ rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.4@sha256:8a84bd5a029681aa8db523f927b7
 [private]
 cosign-installer := "ghcr.io/sigstore/cosign/cosign:v2.4.1"
 [private]
-syft-installer := "ghcr.io/anchore/syft:v1.52.0@sha256:500e2d872ac019436926e8322b4fc1f39441d94d21f6f4046c6ff29b30e8cb02"
+syft-installer := "ghcr.io/anchore/syft:v1.50.0@sha256:1288ea4c8b38767b4e620c1e312c8cb26b6e887a99b4f07ab6cd19fc6f225026"
+[private]
+oras-installer := "ghcr.io/oras-project/oras:v1.3.3@sha256:a4c54befd87d0366e0ba3ac3a9536a5288c8a3735acd3b635cdace59a2c559c8"
 [private]
 chunkah := shell("yq -r \".images[] | select(.name == \\\"chunkah\\\") | \\\"\\\\(.image)@\\\\(.digest)\\\"\" image-versions.yml")
 
@@ -467,6 +470,28 @@ install-syft:
         ${SUDOIF} install -c -m 0755 "$TMPDIR"/syft /usr/local/bin/syft
     fi
 
+# Install ORAS
+[group('CI')]
+install-oras:
+    #!/usr/bin/bash
+    set ${SET_X:+-x} -eou pipefail
+
+    # Get SYFT if needed
+    if ! command -v oras >/dev/null; then
+        # Make TMPDIR
+        TMPDIR="$(mktemp -d)"
+        trap 'rm -rf $TMPDIR' EXIT SIGINT
+
+        # Get Binary
+        ORAS_ID="$(podman create {{ oras-installer }})"
+        podman cp "$ORAS_ID":/bin/oras "$TMPDIR"/oras
+        podman rm -f "$ORAS_ID" > /dev/null
+        podman rmi -f {{ oras-installer }}
+
+        # Install
+        {{ just }} sudoif install -c -m 0755 "$TMPDIR"/oras /usr/local/bin/oras
+    fi
+
 # Get Cosign if Needed
 [group('CI')]
 cosign-verify-image $target_image=image_name $tag=default_tag $key="./build_files/ublue.pub": install-cosign
@@ -489,20 +514,26 @@ cosign-verify-image $target_image=image_name $tag=default_tag $key="./build_file
 
 # Generate SBOM
 [group('CI')]
-gen-sbom $input $output="": install-syft
+sbom-gen $image=image_name $tag=default_tag: install-syft
     #!/usr/bin/bash
     set ${SET_X:+-x} -eou pipefail
 
-    # Make SBOM
-    if [[ -z "$output" ]]; then
-        OUTPUT_PATH="$(mktemp -d)/sbom.json"
-    else
-        OUTPUT_PATH="$output"
-    fi
-    syft scan "{{ input }}" -o spdx-json="$OUTPUT_PATH" --select-catalogers "rpm,+sbom-cataloger"
+    OUT_DIR="sbom_out/${image}-${tag}"
+    mkdir -p "${OUT_DIR}"
+
+    SBOM="${OUT_DIR}/sbom.json"
+    OCI_DIR="${OUT_DIR}/oci-dir"
+
+    # Save image as OCI directory and scan directly — avoids the 4-8 GiB
+    # filesystem extraction that the old podman-export approach required.
+    # Syft reads layer tarballs sequentially so memory usage stays low.
+    podman save --format oci-dir -o "${OCI_DIR}" "${image}:${tag}"
+
+    syft --source-name "${image}:${tag}" "oci-dir:${OCI_DIR}" -o syft-json="${SBOM}"
+    du -sh "${SBOM}"
 
     # Output Path
-    echo "$OUTPUT_PATH"
+    echo "$SBOM"
 
 # Add SBOM Signing
 [group('CI')]
@@ -512,8 +543,8 @@ sbom-sign input $sbom="": install-cosign
 
     # set SBOM
     if [[ ! -f "$sbom" ]]; then
-        echo $sbom
-        # sbom="$({{ just }} gen-sbom {{ input }})"
+        # echo $sbom
+        sbom="$({{ just }} sbom-gen {{ input }})"
     fi
 
     # Sign-blob Args
@@ -544,7 +575,7 @@ sbom-attest input $sbom="" $destination="": install-cosign
 
     # set SBOM
     if [[ ! -f "$sbom" ]]; then
-        sbom="$({{ just }} gen-sbom {{ input }})"
+        sbom="$({{ just }} sbom-gen {{ input }})"
     fi
 
     # Compress
@@ -580,6 +611,13 @@ sbom-attest input $sbom="" $destination="": install-cosign
     cosign attest -y \
         "${SBOM_ATTEST_ARGS[@]}" \
         "$destination/{{ repo_image_name }}@${digest}"
+
+# Changelog
+[group('Changelogs')]
+changelogs branch="stable" handwritten="": install-oras
+    #!/usr/bin/env bash
+    set -eoux pipefail
+    python3 ./.github/changelogs.py "{{ branch }}" ./output.env ./changelog.md --workdir . --handwritten "{{ handwritten }}"
 
 # Generate Default Tag
 [group('Utility')]
