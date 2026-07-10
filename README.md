@@ -21,9 +21,6 @@ Primarily intended for myself.
 
 ### Server
 
-> [!CAUTION]
-> `veneos-server` is still being developed and is yet to be tested in a live system.
-
 - Built on Fedora CoreOS
 - Uses [uCore Hyper-Coverged Infrastructure (HCI)](https://github.com/ublue-os/ucore)
 - Cockpit is preinstalled
