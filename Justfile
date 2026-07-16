@@ -27,7 +27,7 @@ rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.4@sha256:8a84bd5a029681aa8db523f927b7
 [private]
 cosign-installer := "ghcr.io/sigstore/cosign/cosign:v2.4.1"
 [private]
-syft-installer := "ghcr.io/anchore/syft:v1.46.0@sha256:473a60e3a58e29aca3aedb3e99e787bb4ef273917e44d10fcbea4330a07320bb"
+syft-installer := "ghcr.io/anchore/syft:v1.48.0@sha256:b4f1df79f97b817682d8b5ff941eb6bfe74f6172553a5e312c75bbc2eabc405c"
 
 [private]
 default:
