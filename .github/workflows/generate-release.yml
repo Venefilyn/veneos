@@ -1,0 +1,77 @@
+on:
+  workflow_call:
+    inputs:
+      stream_name:
+        description: "Release Tag (e.g. stable, testing)"
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      handwritten:
+        description: "Small Changelog about changes in this build"
+      stream_name:
+        description: "Release Tag (e.g. stable, testing)"
+        required: true
+        type: choice
+        options:
+          - '["stable"]'
+          - '["testing"]'
+
+permissions: {}
+
+name: Generate Release
+jobs:
+  generate-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJson( inputs.stream_name ) }}
+
+    steps:
+      - name: Checkout last 500 commits (for <commits> to work)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 500
+
+      - name: Install Just
+        run: |
+          /home/linuxbrew/.linuxbrew/bin/brew install just
+          echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
+
+      - name: Check Just Syntax
+        shell: bash
+        run: |
+          just check
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@1d808f7d7f6995cc68b7bf507bfe5c5446e1dc9d # v2.0.1
+
+      - name: Generate Release Text
+        id: generate-release-text
+        env:
+          MATRIX_VERSION: "${{ matrix.version }}"
+          HANDWRITTEN: "${{ inputs.handwritten }}"
+        shell: bash
+        run: |
+          just changelogs "${MATRIX_VERSION}" "${HANDWRITTEN}"
+          source ./output.env
+          echo "title=${TITLE}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        if: contains(fromJson('["stable", "testing"]'), matrix.version) && (github.event.schedule == '12 13 * * *' || contains(fromJson('["workflow_dispatch", "workflow_call"]'), github.event_name))
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: ${{ steps.generate-release-text.outputs.title }}
+          TAG: ${{ steps.generate-release-text.outputs.tag }}
+          BODY_PATH: ./changelog.md
+        run: |
+          gh release create \
+          "${TAG}" \
+          --title "${TITLE}" \
+          -F "${BODY_PATH}" \
+          --latest

@@ -35,6 +35,15 @@ jobs:
     with:
       image: ${{ matrix.image }}
 
+  generate-release:
+    name: Generate Release
+    needs: [build-image]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/generate-release.yml
+    with:
+      stream_name: '["latest","testing"]'
+
   # build-iso:
   #   name: Build ISOs
   #   if: ${{ ! contains(github.head_ref, 'renovate') }}
