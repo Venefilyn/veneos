@@ -102,11 +102,11 @@ LAYERED_PACKAGES+=(
     starship
 )
 
-# Cider music app
+# # Cider music app
 
-LAYERED_PACKAGES+=(
-    Cider
-)
+# LAYERED_PACKAGES+=(
+#     Cider
+# )
 
 dnf5 install --setopt=install_weak_deps=False -y "${LAYERED_PACKAGES[@]}"
 
