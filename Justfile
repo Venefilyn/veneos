@@ -1,4 +1,6 @@
-just := just_executable()
+set dotenv-filename := "veneos.env"
+set dotenv-load
+
 export repo_organization := env("GITHUB_REPOSITORY_OWNER", "Venefilyn")
 export image_name := env("IMAGE_NAME", "veneos")
 export repo_image_name := lowercase(repo_organization) / lowercase(image_name)
@@ -27,6 +29,14 @@ rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.4@sha256:8a84bd5a029681aa8db523f927b7
 cosign-installer := "ghcr.io/sigstore/cosign/cosign:v2.4.1"
 [private]
 syft-installer := "ghcr.io/anchore/syft:v1.51.0@sha256:678bfa565b60f747aac0f8e964fe5588a24445b8d0a480e91f6efd70020dfbb0"
+[private]
+chunkah := shell("yq -r \".images[] | select(.name == \\\"chunkah\\\") | \\\"\\\\(.image)@\\\\(.digest)\\\"\" image-versions.yml")
+
+export SUDO_DISPLAY := if `if [ -n "${DISPLAY:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then echo true; fi` == "true" { "true" } else { "false" }
+export SUDOIF := if `id -u` == "0" { "" } else { "sudo" }
+export PODMAN := "podman"
+export BUILDAH := "buildah"
+just := just_executable()
 
 [private]
 default:
@@ -71,25 +81,7 @@ clean:
 [group('Utility')]
 [private]
 sudo-clean:
-    {{ just }} sudoif {{ just }} clean
-
-# sudoif bash function
-[group('Utility')]
-[private]
-sudoif command *args:
-    #!/usr/bin/bash
-    function sudoif(){
-        if [[ "${UID}" -eq 0 ]]; then
-            "$@"
-        elif [[ "$(command -v sudo)" && -n "${SSH_ASKPASS:-}" ]] && [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
-            /usr/bin/sudo --askpass "$@" || exit 1
-        elif [[ "$(command -v sudo)" ]]; then
-            /usr/bin/sudo "$@" || exit 1
-        else
-            exit 1
-        fi
-    }
-    sudoif {{ command }} {{ args }}
+    ${SUDOIF} {{ just }} clean
 
 # This Justfile recipe builds a container image using Podman.
 #
@@ -253,16 +245,16 @@ _rootful_load_image $target_image=image_name $tag=default_tag:
 
     if [[ $return_code -eq 0 ]]; then
         # If the image is found, load it into rootful podman
-        ID=$({{ just }} sudoif podman images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
+        ID=$(${SUDOIF} podman images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
         if [[ "$ID" != "$USER_IMG_ID" ]]; then
             # If the image ID is not found or different from user, copy the image from user podman to root podman
             COPYTMP=$(mktemp -p "${PWD}" -d -t _build_podman_scp.XXXXXXXXXX)
-            {{ just }} sudoif TMPDIR=${COPYTMP} podman image scp ${UID}@localhost::"${target_image}:${tag}" root@localhost::"${target_image}:${tag}"
+            ${SUDOIF} TMPDIR=${COPYTMP} podman image scp ${UID}@localhost::"${target_image}:${tag}" root@localhost::"${target_image}:${tag}"
             rm -rf "${COPYTMP}"
         fi
     else
         # If the image is not found, pull it from the repository
-        {{ just }} sudoif podman pull "${target_image}:${tag}"
+        ${SUDOIF} podman pull "${target_image}:${tag}"
     fi
 
 # Build a bootc bootable image using Bootc Image Builder (BIB)
@@ -444,7 +436,7 @@ install-cosign:
         podman rmi -f {{ cosign-installer }}
 
         # Install
-        {{ just }} sudoif install -c -m 0755 "$TMPDIR"/cosign /usr/local/bin/cosign
+        ${SUDOIF} install -c -m 0755 "$TMPDIR"/cosign /usr/local/bin/cosign
 
         # Verify Cosign Image Signatures if needed
         if ! cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com --certificate-identity=https://github.com/chainguard-images/images/.github/workflows/release.yaml@refs/heads/main cgr.dev/chainguard/cosign >/dev/null; then
@@ -472,7 +464,7 @@ install-syft:
         podman rmi -f {{ syft-installer }}
 
         # Install
-        {{ just }} sudoif install -c -m 0755 "$TMPDIR"/syft /usr/local/bin/syft
+        ${SUDOIF} install -c -m 0755 "$TMPDIR"/syft /usr/local/bin/syft
     fi
 
 # Get Cosign if Needed
@@ -589,6 +581,14 @@ sbom-attest input $sbom="" $destination="": install-cosign
         "${SBOM_ATTEST_ARGS[@]}" \
         "$destination/{{ repo_image_name }}@${digest}"
 
+# Generate Default Tag
+[group('Utility')]
+generate-default-tag $tag=default_tag:
+    #!/usr/bin/env bash
+    set -eoux pipefail
+
+    echo "${tag}"
+
 # Generate Tags
 [group('Utility')]
 generate-build-tags $tag=default_tag $github_number="0" $base_version="":
@@ -618,20 +618,30 @@ generate-build-tags $tag=default_tag $github_number="0" $base_version="":
 
 # Tag Images
 [group('Utility')]
-tag-images image_name="" default_tag="" tags="":
+tag-images $image_name="" $tag="" tags="":
     #!/usr/bin/bash
     set -eou pipefail
 
     # Get Image, and untag
-    IMAGE=$(podman inspect localhost/{{ image_name }}:{{ default_tag }} --format '{{{{.Id}}')
+    IMAGE=$(podman inspect localhost/${image_name}:${tag} --format '{{{{.Id}}')
+    ${PODMAN} untag ${IMAGE}
 
     # Tag Image
     for tag in {{ tags }}; do
-        podman tag $IMAGE {{ image_name }}:${tag}
+        podman tag $IMAGE ${image_name}:${tag}
     done
 
     # Show Images
     podman images --filter id=$IMAGE
+
+# Image Name
+[group('Utility')]
+[private]
+image_name $target_image=image_name:
+    #!/usr/bin/env bash
+    set -eoux pipefail
+
+    echo "${image_name}"
 
 # Login to GHCR
 [group('CI')]
@@ -653,7 +663,34 @@ push-to-registry $image_name $default_tag $tags="" registry=IMAGE_REGISTRY:
     echo "$digest"
 
 [group('Utility')]
-rechunk $target_image=image_name $tag=default_tag:
+rechunk $image=image_name $tag=default_tag:
+    #!/usr/bin/env bash
+    set ${SET_X:+-x} -eou pipefail
+
+    CHUNKAH_OUTPUT_DIR="$(mktemp -d)"
+    CHUNKAH_CONFIG_FILE="$(mktemp)"
+
+    trap 'rm -f "${CHUNKAH_CONFIG_FILE}"; rm -rf "${CHUNKAH_OUTPUT_DIR}"' EXIT
+    ${PODMAN} inspect "${image_name}:${tag}" > "${CHUNKAH_CONFIG_FILE}"
+
+    ${PODMAN} run --rm --mount=type=image,src="${image_name}:${tag}",target=/chunkah \
+    -v "${CHUNKAH_CONFIG_FILE}:/chunkah-config.json:ro,Z" \
+    -v "${CHUNKAH_OUTPUT_DIR}:/run/out:Z" \
+    "{{ chunkah }}" \
+    build \
+    --verbose \
+    --compressed \
+    --max-layers 256 \
+    --prune /sysroot/ \
+    --label ostree.commit- --label ostree.final-diffid- \
+    --config /chunkah-config.json \
+    --output oci:/run/out/chunked
+
+    CHUNKED_IMAGE="$(podman pull "oci:${CHUNKAH_OUTPUT_DIR}/chunked")"
+    podman tag "${CHUNKED_IMAGE}" "${image_name}:${tag}"
+
+[group('Utility')]
+rechunk-ostree $target_image=image_name $tag=default_tag:
     #!/usr/bin/env bash
     set ${SET_X:+-x} -eou pipefail
 

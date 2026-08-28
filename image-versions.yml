@@ -23,6 +23,12 @@ images:
     tag: testing
     digest: sha256:fd4a14d22c4e7327ea6a282283fb820f5168d139984245c4b1586a1738bb0614
 
+  # https://github.com/coreos/chunkah
+  - name: chunkah
+    image: quay.io/coreos/chunkah
+    tag: latest
+    digest: sha256:ff8b8b466a942ec6000445d4001fc661e2fc5a952ad9ee29b4de9ab09d1d1708
+
 veneos:
   - tag: stable
     upstream: *bazzite
