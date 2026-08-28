@@ -103,8 +103,7 @@ LAYERED_PACKAGES+=(
 )
 
 # Cider music app
-log "Import Cider Collective RPM key"
-rpm --import /usr/share/veneos/RPM-GPG-KEY-CIDER-COLLECTIVE
+
 LAYERED_PACKAGES+=(
     Cider
 )
