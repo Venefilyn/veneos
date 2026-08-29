@@ -671,9 +671,9 @@ rechunk $image=image_name $tag=default_tag:
     CHUNKAH_CONFIG_FILE="$(mktemp)"
 
     trap 'rm -f "${CHUNKAH_CONFIG_FILE}"; rm -rf "${CHUNKAH_OUTPUT_DIR}"' EXIT
-    ${PODMAN} inspect "${image_name}:${tag}" > "${CHUNKAH_CONFIG_FILE}"
+    ${PODMAN} inspect "${image}:${tag}" > "${CHUNKAH_CONFIG_FILE}"
 
-    ${PODMAN} run --rm --mount=type=image,src="${image_name}:${tag}",target=/chunkah \
+    ${PODMAN} run --rm --mount=type=image,src="${image}:${tag}",target=/chunkah \
     -v "${CHUNKAH_CONFIG_FILE}:/chunkah-config.json:ro,Z" \
     -v "${CHUNKAH_OUTPUT_DIR}:/run/out:Z" \
     "{{ chunkah }}" \
@@ -686,8 +686,8 @@ rechunk $image=image_name $tag=default_tag:
     --config /chunkah-config.json \
     --output oci:/run/out/chunked
 
-    CHUNKED_IMAGE="$(podman pull "oci:${CHUNKAH_OUTPUT_DIR}/chunked")"
-    podman tag "${CHUNKED_IMAGE}" "${image_name}:${tag}"
+    CHUNKED_IMAGE="$(${PODMAN} pull "oci:${CHUNKAH_OUTPUT_DIR}/chunked")"
+    ${PODMAN} tag "${CHUNKED_IMAGE}" "${image}:${tag}"
 
 [group('Utility')]
 rechunk-ostree $target_image=image_name $tag=default_tag:
