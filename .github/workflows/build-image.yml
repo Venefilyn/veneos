@@ -190,7 +190,7 @@ jobs:
 
           sudo $just login-to-ghcr ${{ env.ACTOR }} ${{ env.TOKEN }}
 
-          digest=$(sudo $just push-to-registry "${IMAGE_NAME}" "${{ matrix.variant }}" "${{ steps.tags.outputs.tags }}" "${ IMAGE_REGISTRY }")
+          digest=$(sudo $just push-to-registry "${IMAGE_NAME}" "${{ matrix.variant }}" "${{ steps.tags.outputs.tags }}" "${IMAGE_REGISTRY}")
 
           echo "digest=$digest" >> $GITHUB_OUTPUT
 
