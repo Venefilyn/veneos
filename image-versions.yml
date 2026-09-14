@@ -3,7 +3,7 @@ images:
     name: bazzite-gnome-stable
     image: ghcr.io/ublue-os/bazzite-gnome
     tag: stable-44
-    digest: sha256:47493578e533819f91f1cf208376c1c3b48f2f8fdccea8bab7a65d3cba63283f
+    digest: sha256:a116bee0bd0b326b8cb90521f7c348cc4c70d864a3f036a75145cea246fdef84
 
   - &bazzite-testing
     name: bazzite-gnome-testing
