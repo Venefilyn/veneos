@@ -1,6 +1,6 @@
 [cidercollective]
 name=Cider Collective Repository
 baseurl=https://repo.cider.sh/rpm/RPMS
-enabled=0
+enabled=1
 gpgcheck=1
 gpgkey=file:///usr/share/veneos/RPM-GPG-KEY-CIDER-COLLECTIVE
