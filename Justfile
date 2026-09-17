@@ -28,7 +28,7 @@ rechunker := "ghcr.io/hhd-dev/rechunk:v1.2.4@sha256:8a84bd5a029681aa8db523f927b7
 [private]
 cosign-installer := "ghcr.io/sigstore/cosign/cosign:v2.4.1"
 [private]
-syft-installer := "ghcr.io/anchore/syft:v1.51.1@sha256:95fe0835e5bebc6f8b1f8acef68d47d63d594ef4c0f25c097ff853b23cbac74c"
+syft-installer := "ghcr.io/anchore/syft:v1.52.0@sha256:500e2d872ac019436926e8322b4fc1f39441d94d21f6f4046c6ff29b30e8cb02"
 [private]
 chunkah := shell("yq -r \".images[] | select(.name == \\\"chunkah\\\") | \\\"\\\\(.image)@\\\\(.digest)\\\"\" image-versions.yml")
 
