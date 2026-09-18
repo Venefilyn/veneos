@@ -21,7 +21,7 @@ images:
     name: ucore-hci-testing
     image: ghcr.io/ublue-os/ucore-hci
     tag: testing
-    digest: sha256:36476f2cf5b433811c1c876fe90b6578d330d5826f0c6ec385b5307d8610242d
+    digest: sha256:6ec63b674d8382c1155136092e6420d434b4bf02b762cb49f27f56aac807b688
 
   # https://github.com/coreos/chunkah
   - name: chunkah
