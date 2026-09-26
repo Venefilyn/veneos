@@ -13,9 +13,9 @@ Primarily intended for myself.
 
 ### Desktop
 
-- Built on Fedora Atomic 43
+- Built on Fedora Atomic 44
 - Uses [Bazzite](https://bazzite.gg/) as the base image
-- GNOME 49
+- GNOME 50
 - Optimized for AMD GPU
 - [Bazzite features](https://github.com/ublue-os/bazzite#about--features)
 
