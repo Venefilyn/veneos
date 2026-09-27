@@ -184,6 +184,8 @@ image-flavors $target_image=image_name:
     #!/usr/bin/env bash
     set ${SET_X:+-x} -eou pipefail
 
+    {{ ci_grouping }}
+
     # Verify that the image to build exists
     base_tags=$(yq -o json -r "[.${target_image}[].tag]" {{ image-file }})
     if [[ -z $base_tags ]]; then
@@ -537,7 +539,12 @@ sbom-gen $image=image_name $tag=default_tag: install-syft
     syft --verbose --source-name "${image_name}:${tag}" "${OUT_DIR}" -o syft-json=${SBOM}
     du -sh "${SBOM}"
 
-    rm -rf "${ROOTFS}"
+    RM_CMD=("rm" "-rf" "${ROOTFS}")
+    if [[ ! "$(id -u)" == 0 ]]; then
+      RM_CMD=("${PODMAN}" "unshare" "${RM_CMD[@]}")
+    fi
+
+    ${RM_CMD[@]}
 
     # Output Path
     echo "$SBOM"
