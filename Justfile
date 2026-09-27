@@ -171,7 +171,7 @@ build $target_image=image_name $tag=default_tag:
     LABELS+=("--label" "io.artifacthub.package.maintainers=[{\"name\": \"Freya Gustavsson\", \"email\": \"freya@venefilyn.se\"}]")
     LABELS+=("--label" "containers.bootc=1")
 
-    podman build \
+    ${PODMAN} build \
         --file Containerfile.in \
         "${BUILD_ARGS[@]}" \
         "${LABELS[@]}" \
@@ -240,24 +240,24 @@ _rootful_load_image $target_image=image_name $tag=default_tag:
 
     # Try to resolve the image tag using podman inspect
     set +e
-    resolved_tag=$(podman inspect -t image "${target_image}:${tag}" | jq -r '.[].RepoTags.[0]')
+    resolved_tag=$(${PODMAN} inspect -t image "${target_image}:${tag}" | jq -r '.[].RepoTags.[0]')
     return_code=$?
     set -e
 
-    USER_IMG_ID=$(podman images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
+    USER_IMG_ID=$(${PODMAN} images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
 
     if [[ $return_code -eq 0 ]]; then
         # If the image is found, load it into rootful podman
-        ID=$(${SUDOIF} podman images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
+        ID=$(${SUDOIF} ${PODMAN} images --filter reference="${target_image}:${tag}" --format "'{{ '{{.ID}}' }}'")
         if [[ "$ID" != "$USER_IMG_ID" ]]; then
             # If the image ID is not found or different from user, copy the image from user podman to root podman
             COPYTMP=$(mktemp -p "${PWD}" -d -t _build_podman_scp.XXXXXXXXXX)
-            ${SUDOIF} TMPDIR=${COPYTMP} podman image scp ${UID}@localhost::"${target_image}:${tag}" root@localhost::"${target_image}:${tag}"
+            ${SUDOIF} TMPDIR=${COPYTMP} ${PODMAN} image scp ${UID}@localhost::"${target_image}:${tag}" root@localhost::"${target_image}:${tag}"
             rm -rf "${COPYTMP}"
         fi
     else
         # If the image is not found, pull it from the repository
-        ${SUDOIF} podman pull "${target_image}:${tag}"
+        ${SUDOIF} ${PODMAN} pull "${target_image}:${tag}"
     fi
 
 # Build a bootc bootable image using Bootc Image Builder (BIB)
@@ -283,7 +283,7 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
 
     BUILDTMP=$(mktemp -p "${PWD}" -d -t _build-bib.XXXXXXXXXX)
 
-    sudo podman run \
+    sudo ${PODMAN} run \
       --rm \
       -it \
       --privileged \
@@ -376,7 +376,7 @@ _run-vm $target_image $tag $type $config:
 
     # Run the VM and open the browser to connect
     (sleep 30 && xdg-open http://localhost:"$port") &
-    podman run "${run_args[@]}"
+    ${PODMAN} run "${run_args[@]}"
 
 # Run a virtual machine from a QCOW2 image
 [group('Run Virtal Machine')]
@@ -433,10 +433,10 @@ install-cosign:
         trap 'rm -rf $TMPDIR' EXIT SIGINT
 
         # Get Binary
-        COSIGN_CONTAINER_ID="$(podman create {{ cosign-installer }} bash)"
-        podman cp "${COSIGN_CONTAINER_ID}":/ko-app/cosign "$TMPDIR"/cosign
-        podman rm -f "${COSIGN_CONTAINER_ID}"
-        podman rmi -f {{ cosign-installer }}
+        COSIGN_CONTAINER_ID="$(${PODMAN} create {{ cosign-installer }} bash)"
+        ${PODMAN} cp "${COSIGN_CONTAINER_ID}":/ko-app/cosign "$TMPDIR"/cosign
+        ${PODMAN} rm -f "${COSIGN_CONTAINER_ID}"
+        ${PODMAN} rmi -f {{ cosign-installer }}
 
         # Install
         ${SUDOIF} install -c -m 0755 "$TMPDIR"/cosign /usr/local/bin/cosign
@@ -461,10 +461,10 @@ install-syft:
         trap 'rm -rf $TMPDIR' EXIT SIGINT
 
         # Get Binary
-        SYFT_ID="$(podman create {{ syft-installer }})"
-        podman cp "$SYFT_ID":/syft "$TMPDIR"/syft
-        podman rm -f "$SYFT_ID" > /dev/null
-        podman rmi -f {{ syft-installer }}
+        SYFT_ID="$(${PODMAN} create {{ syft-installer }})"
+        ${PODMAN} cp "$SYFT_ID":/syft "$TMPDIR"/syft
+        ${PODMAN} rm -f "$SYFT_ID" > /dev/null
+        ${PODMAN} rmi -f {{ syft-installer }}
 
         # Install
         ${SUDOIF} install -c -m 0755 "$TMPDIR"/syft /usr/local/bin/syft
@@ -483,10 +483,10 @@ install-oras:
         trap 'rm -rf $TMPDIR' EXIT SIGINT
 
         # Get Binary
-        ORAS_ID="$(podman create {{ oras-installer }})"
-        podman cp "$ORAS_ID":/bin/oras "$TMPDIR"/oras
-        podman rm -f "$ORAS_ID" > /dev/null
-        podman rmi -f {{ oras-installer }}
+        ORAS_ID="$(${PODMAN} create {{ oras-installer }})"
+        ${PODMAN} cp "$ORAS_ID":/bin/oras "$TMPDIR"/oras
+        ${PODMAN} rm -f "$ORAS_ID" > /dev/null
+        ${PODMAN} rmi -f {{ oras-installer }}
 
         # Install
         {{ just }} sudoif install -c -m 0755 "$TMPDIR"/oras /usr/local/bin/oras
@@ -529,7 +529,7 @@ sbom-gen $image=image_name $tag=default_tag: install-syft
     # Save image as OCI directory and scan directly — avoids the 4-8 GiB
     # filesystem extraction that the old podman-export approach required.
     # Syft reads layer tarballs sequentially so memory usage stays low.
-    podman save --format oci-dir -o "${OCI_DIR}" "${image}:${tag}"
+    ${PODMAN} save --format oci-dir -o "${OCI_DIR}" "${image}:${tag}"
 
     syft --source-name "${image}:${tag}" "oci-dir:${OCI_DIR}" -o syft-json="${SBOM}"
     du -sh "${SBOM}"
@@ -663,16 +663,16 @@ tag-images $image_name="" $tag="" tags="":
     set -eou pipefail
 
     # Get Image, and untag
-    IMAGE=$(podman inspect localhost/${image_name}:${tag} --format '{{{{.Id}}')
+    IMAGE=$(${PODMAN} inspect localhost/${image_name}:${tag} --format '{{{{.Id}}')
     ${PODMAN} untag ${IMAGE}
 
     # Tag Image
     for tag in {{ tags }}; do
-        podman tag $IMAGE ${image_name}:${tag}
+        ${PODMAN} tag $IMAGE ${image_name}:${tag}
     done
 
     # Show Images
-    podman images --filter id=$IMAGE
+    ${PODMAN} images --filter id=$IMAGE
 
 # Image Name
 [group('Utility')]
@@ -686,7 +686,7 @@ image_name $target_image=image_name:
 # Login to GHCR
 [group('CI')]
 @login-to-ghcr $user $token:
-    echo "$token" | podman login ghcr.io -u "$user" --password-stdin
+    echo "$token" | ${PODMAN} login ghcr.io -u "$user" --password-stdin
 
 # Push Images to Registry
 [group('CI')]
@@ -695,7 +695,7 @@ push-to-registry $image_name $default_tag $tags="" registry=IMAGE_REGISTRY:
     set ${SET_X:+-x} -eou pipefail
 
     for tag in $tags; do
-        podman push "${image_name}:${tag}" "docker://{{ lowercase(registry) }}/${image_name}:${tag}"
+        ${PODMAN} push "${image_name}:${tag}" "docker://{{ lowercase(registry) }}/${image_name}:${tag}"
     done
 
     digest=$(skopeo inspect docker://{{ lowercase(registry) }}/${image_name}:${default_tag} --format '{{{{.Digest}}')
@@ -735,7 +735,7 @@ rechunk-ostree $target_image=image_name $tag=default_tag:
     set ${SET_X:+-x} -eou pipefail
 
     # echo "::group:: Rechunk Prune"
-    # podman run --rm \
+    # ${PODMAN} run --rm \
     #     --privileged \
     #     --security-opt label=disable \
     #     --mount "type=image,src="localhost/${target_image}:${tag}",dst=/var/tree,rw=true" \
@@ -746,7 +746,7 @@ rechunk-ostree $target_image=image_name $tag=default_tag:
     # echo "::endgroup::"
 
     # echo "::group:: Create Tree"
-    # podman run --rm \
+    # ${PODMAN} run --rm \
     #     --privileged \
     #     --mount "type=image,src="localhost/${target_image}:${tag}",dst=/var/tree,rw=true" \
     #     --env TREE=/var/tree \
@@ -756,7 +756,7 @@ rechunk-ostree $target_image=image_name $tag=default_tag:
     # echo "::endgroup::"
 
     echo "::group:: Rechunk"
-    podman run --rm \
+    ${PODMAN} run --rm \
         --privileged \
         -v /var/lib/containers:/var/lib/containers \
         "quay.io/centos-bootc/centos-bootc:{{ centos_version }}" \
