@@ -517,7 +517,7 @@ cosign-verify-image $target_image=image_name $tag=default_tag $key="./build_file
 [arg("tag", long="tag", short="t")]
 [group('CI')]
 sbom-gen $image=image_name $tag=default_tag: install-syft
-    #!/usr/bin/bash
+    #!/usr/bin/env bash
     set ${SET_X:+-x} -eou pipefail
 
     OUT_DIR="sbom_out/${image}-${tag}"
@@ -526,13 +526,20 @@ sbom-gen $image=image_name $tag=default_tag: install-syft
     SBOM="${OUT_DIR}/sbom.json"
     OCI_DIR="${OUT_DIR}/oci-dir"
 
-    # Save image as OCI directory and scan directly — avoids the 4-8 GiB
-    # filesystem extraction that the old podman-export approach required.
-    # Syft reads layer tarballs sequentially so memory usage stays low.
-    ${PODMAN} save --format oci-dir -o "${OCI_DIR}" "${image}:${tag}"
+    # We have to do it this stupid way because we are OOMing on github runners
+    # https://github.com/anchore/syft/issues/3800
+    ${PODMAN} container create --replace --name ${image} "${image}:${tag}"
 
-    syft --source-name "${image}:${tag}" "oci-dir:${OCI_DIR}" -o syft-json="${SBOM}"
+    ROOTFS="${OUT_DIR}/rootfs"
+    mkdir -p "${ROOTFS}"
+
+    ${PODMAN} export ${image} | tar -C "${ROOTFS}" -xf -
+    ${PODMAN} container rm ${image}
+
+    syft --verbose --source-name "${image_name}:${tag}" "${OUT_DIR}" -o syft-json=${SBOM}
     du -sh "${SBOM}"
+
+    rm -rf "${ROOTFS}"
 
     # Output Path
     echo "$SBOM"
