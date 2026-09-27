@@ -229,7 +229,7 @@ jobs:
         env:
           DIGEST: ${{ steps.push.outputs.digest }}
         run: |
-          SBOM="sbom_out/${IMAGE_NAME}/sbom.json"
+          SBOM="sbom_out/${IMAGE_NAME}-${{ matrix.variant }}/sbom.json"
 
           cd "$(dirname "${SBOM}")"
           oras attach \
