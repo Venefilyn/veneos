@@ -514,6 +514,8 @@ cosign-verify-image $target_image=image_name $tag=default_tag $key="./build_file
 
 # Generate SBOM
 [group('CI')]
+[arg("image", long="image", short="i")]
+[arg("tag", long="tag", short="t")]
 sbom-gen $image=image_name $tag=default_tag: install-syft
     #!/usr/bin/bash
     set ${SET_X:+-x} -eou pipefail
