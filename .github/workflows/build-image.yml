@@ -30,6 +30,8 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}-${{ inputs.image }}
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   get-variants:
     name: Get Images for Build
