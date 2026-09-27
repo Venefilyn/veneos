@@ -184,8 +184,6 @@ image-flavors $target_image=image_name:
     #!/usr/bin/env bash
     set ${SET_X:+-x} -eou pipefail
 
-    {{ ci_grouping }}
-
     # Verify that the image to build exists
     base_tags=$(yq -o json -r "[.${target_image}[].tag]" {{ image-file }})
     if [[ -z $base_tags ]]; then
