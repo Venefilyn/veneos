@@ -215,10 +215,10 @@ jobs:
           # use old bundle format, so we can use newer cosign 3.X.X instead of 2.X.X
           cosign sign -y --new-bundle-format=false --use-signing-config=false --key env://COSIGN_PRIVATE_KEY ${IMAGE_REGISTRY}/${IMAGE_NAME}@${DIGEST}
 
-      - name: Setup Syft
-        id: setup-syft
-        if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-        uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+      # - name: Setup Syft
+      #   id: setup-syft
+      #   if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+      #   uses: anchore/sbom-action/download-syft@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
 
       - name: Generate SBOM
         id: generate-sbom
@@ -226,12 +226,11 @@ jobs:
         env:
           IMAGE: ${{ inputs.image }}
           TAG: ${{ matrix.variant }}
-          SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
+          # SYFT_CMD: ${{ steps.setup-syft.outputs.cmd }}
         run: |
           $(command -v just) sbom-gen \
             --image "${IMAGE}" \
-            --tag "${TAG}" \
-            "${SYFT_CMD}"
+            --tag "${TAG}"
 
       - name: Upload SBOM
         id: upload-sbom
