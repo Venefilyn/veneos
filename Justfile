@@ -204,8 +204,6 @@ image-baseos-version $target_image=image_name $base=default_tag:
     #!/usr/bin/env bash
     set ${SET_X:+-x} -eou pipefail
 
-    {{ ci_grouping }}
-
     # Verify that the image to build exists
     baseos_version=$(yq -r ".${target_image}[] | select(.tag == \"${base}\") | .upstream | explode(.) | .tag | split(\"-\").[1]" {{ image-file }})
     if [[ "${baseos_version}" == "null" ]]; then
