@@ -121,6 +121,7 @@ build $target_image=image_name $tag=default_tag:
 
     upstream_image=$(echo "$image" | yq ".upstream.image ")
     upstream_tag=$(echo "$image" | yq ".upstream | \"\\(.tag)@\\(.digest)\"")
+    upstream_name=$(echo "$image" | yq ".upstream | \"\\(.name)\"" | cut -d '-' -f1)
 
     if [[ -v CI ]]; then
         BUILD_ARGS+=("--cpp-flag" "-DGHCI")
@@ -144,7 +145,7 @@ build $target_image=image_name $tag=default_tag:
     # Labels
     LABELS=()
     LABELS+=("--label" "org.opencontainers.image.created=$(date -u +%Y\-%m\-%d\T%H\:%M\:%S\Z)")
-    LABELS+=("--label" "org.opencontainers.image.description=${IMAGE_DESC:+""}")
+    LABELS+=("--label" "org.opencontainers.image.description=Venefilyn's personal bootc OS, based off of ${upstream_name}")
     LABELS+=("--label" "org.opencontainers.image.documentation=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/README.md")
     LABELS+=("--label" "org.opencontainers.image.source=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/Containerfile")
     LABELS+=("--label" "org.opencontainers.image.title=${image_name}")
