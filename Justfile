@@ -151,6 +151,11 @@ build $target_image=image_name $tag=default_tag:
     LABELS+=("--label" "org.opencontainers.image.url=https://github.com/${repo_organization}/${image_name}")
     LABELS+=("--label" "org.opencontainers.image.vendor=${repo_organization}")
     LABELS+=("--label" "org.opencontainers.image.version=${target_image}.$(date -u +%Y\-%m\-%d)")
+    if [[ -z "$(git status -s)" ]]; then
+        LABELS+=("--label" "org.opencontainers.image.revision=$(git rev-parse HEAD)")
+    else
+        LABELS+=("--label" "org.opencontainers.image.revision=deadbeef")
+    fi
 
     LABELS+=("--label" "io.artifacthub.package.readme-url=https://raw.githubusercontent.com/${repo_organization}/${image_name}/refs/heads/main/README.md")
     LABELS+=("--label" "io.artifacthub.package.deprecated=false")
