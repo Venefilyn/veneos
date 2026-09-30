@@ -60,6 +60,7 @@ jobs:
     runs-on: ubuntu-26.04
 
     permissions:
+      # For creating releases
       contents: read
       packages: write
       id-token: write
@@ -260,3 +261,26 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           # Keep this disabled, this confuses cosign verify
           push-to-registry: false
+
+  release:
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    name: Create releases
+    needs:
+      - get-variants
+      - build_push
+    runs-on: ubuntu-26.04
+
+    permissions:
+      # For creating releases
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+
+    steps:
+      - name: Generate release
+        uses: ./.github/workflows/generate-release.yml
+        with:
+          stream_name: ${{ inputs.image }}
+          stream_tags: '["${{ fromJson(needs.get-variants.outputs.variants) }}"]'

@@ -630,10 +630,10 @@ sbom-attest input $sbom="" $destination="": install-cosign
 
 # Changelog
 [group('Changelogs')]
-changelogs branch="stable" handwritten="": install-oras
+changelogs image="veneos" branch="stable" handwritten="": install-oras
     #!/usr/bin/env bash
     set -eoux pipefail
-    python3 ./.github/changelogs.py "{{ branch }}" ./output.env ./changelog.md --workdir . --handwritten "{{ handwritten }}"
+    python3 ./.github/changelogs.py "{{ image }}" "{{ branch }}" ./output.env ./changelog.md --workdir . --handwritten "{{ handwritten }}"
 
 # Generate Default Tag
 [group('Utility')]

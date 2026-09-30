@@ -1,3 +1,4 @@
+from itertools import product
 import json
 import os
 import re
@@ -40,8 +41,8 @@ COMMITS_FORMAT = (
 )
 COMMIT_FORMAT = "\n| **[{short}](https://github.com/Venefilyn/veneos/commit/{githash})** | {subject} | {author} |"
 
-CHANGELOG_TITLE = "{tag}: {pretty}"
-CHANGELOG_FORMAT = """\
+CHANGELOG_TITLE = "{image}:{tag} - {pretty}"
+CHANGELOG_FORMAT_SERVER = """\
 {handwritten}
 
 From previous `{target}` version `{prev}` there have been the following changes. **One package per new version shown.**
@@ -50,77 +51,81 @@ From previous `{target}` version `{prev}` there have been the following changes.
 | Name | Version |
 | --- | --- |
 | **Kernel** | {pkgrel:kernel} |
-| **KDE** | {pkgrel:plasma-desktop} |
-| **Mesa** | {pkgrel:mesa-filesystem} |
 | **Podman** | {pkgrel:podman} |
-| **Nvidia** | {pkgrel:nvidia-driver} |
-
-### Major DX packages
-| Name | Version |
-| --- | --- |
-| **Incus** | {pkgrel:incus} |
-| **Docker** | {pkgrel:docker-ce} |
-| **ROCm** | {pkgrel:rocm-runtime} |
-{changes}
 
 ### How to rebase
 For current users, type the following to rebase to this version:
 ```bash
 # For this Stream
-sudo bootc switch --enforce-container-sigpolicy ghcr.io/venefilyn/{variant}:{target}
+sudo bootc switch --enforce-container-sigpolicy ghcr.io/venefilyn/{image}:{target}
 
 # For this Specific Image:
-sudo bootc switch --enforce-container-sigpolicy ghcr.io/venefilyn/{variant}:{curr}
+sudo bootc switch --enforce-container-sigpolicy ghcr.io/venefilyn/{image}:{curr}
+```
+"""
+CHANGELOG_FORMAT_GNOME = """\
+{handwritten}
+
+From previous `{target}` version `{prev}` there have been the following changes. **One package per new version shown.**
+
+### Major packages
+| Name | Version |
+| --- | --- |
+| **Kernel** | {pkgrel:kernel} |
+| **GNOME** | {pkgrel:gnome-session} |
+| **Podman** | {pkgrel:podman} |
+
+### How to rebase
+For current users, type the following to rebase to this version:
+```bash
+# For this Stream
+sudo bootc switch --enforce-container-sigpolicy ghcr.io/venefilyn/{image}:{target}
+
+# For this Specific Image:
+sudo bootc switch --enforce-container-sigpolicy ghcr.io/venefilyn/{image}:{curr}
 ```
 """
 HANDWRITTEN_PLACEHOLDER = """\
 This is an automatically generated changelog for release `{curr}`."""
 
-BLACKLIST_VERSIONS = [
+BLOCKLIST_VERSIONS = [
     "kernel",
-    "plasma-desktop",
+    "gnome-session",
     "mesa-filesystem",
     "podman",
-    "docker-ce",
-    "incus",
-    "devpod",
-    "nvidia-driver",
 ]
 
 
 def get_images():
-    yield from IMAGE_MATRIX.items()
+    return IMAGE_MATRIX.keys()
 
 
-def get_manifests(target: str):
+def get_manifest(img: str, tag: str):
     out = {}
-    imgs = list(get_images())
-    for j, (img, _) in enumerate(imgs):
-        output = None
-        print(f"Getting {img}:{target} manifest ({j + 1}/{len(imgs)}).")
-        for i in range(RETRIES):
-            try:
-                output = subprocess.run(
-                    ["skopeo", "inspect", f"docker://{REGISTRY}{img}:{target}"],
-                    check=True,
-                    stdout=subprocess.PIPE,
-                ).stdout
-                break
-            except subprocess.CalledProcessError:
-                print(
-                    f"Failed to get {img}:{target}, retrying in {RETRY_WAIT} seconds ({i + 1}/{RETRIES})"
-                )
-                time.sleep(RETRY_WAIT)
-        if output is None:
-            print(f"Failed to get {img}:{target}, skipping")
-            continue
-        out[img] = json.loads(output)
+    output = None
+    print(f"Getting {img}:{tag} manifest.")
+    for i in range(RETRIES):
+        try:
+            output = subprocess.run(
+                ["skopeo", "inspect", f"docker://{REGISTRY}{img}:{tag}"],
+                check=True,
+                stdout=subprocess.PIPE,
+            ).stdout
+            break
+        except subprocess.CalledProcessError:
+            print(
+                f"Failed to get {img}:{tag}, retrying in {RETRY_WAIT} seconds ({i + 1}/{RETRIES})"
+            )
+            time.sleep(RETRY_WAIT)
+    if output is None:
+        print(f"Failed to get {img}:{tag}")
+    out[img] = json.loads(output)
     return out
 
 
 def get_tags(target: str, manifests: dict[str, Any]):
     """
-    >>> imgs = lambda tags: {"aurora": {"RepoTags": tags}}
+    >>> imgs = lambda tags: {"veneos": {"RepoTags": tags}}
 
     When bare and indexed on the same day, indexed wins:
     >>> get_tags("stable", imgs(["stable-20260602.1", "stable-20260609", "stable-20260609.1"]))
@@ -244,31 +249,29 @@ def parse_sbom_packages(sbom: dict) -> dict[str, str]:
     return packages
 
 
-def get_packages(target: str, images: list[tuple[str, str, str]]):
+def get_packages(target: str, img: tuple[str, str, str]):
     packages = {}
-    for j, (img, _) in enumerate(images):
-        print(f"Getting packages for {img}:{target} via SBOM ({j + 1}/{len(images)})")
-        try:
-            full_image = f"{REGISTRY}{img}"
-            digest = get_image_digest(full_image, target)
-            sbom = get_sbom(full_image, digest)
-            packages[img] = parse_sbom_packages(sbom)
-            print(f"  Found {len(packages[img])} packages")
-        except Exception as e:
-            print(f"  Failed to get packages for {img}:{target}: {e}")
-            raise e
+    print(f"Getting packages for {img}:{target} via SBOM")
+    try:
+        full_image = f"{REGISTRY}{img}"
+        digest = get_image_digest(full_image, target)
+        sbom = get_sbom(full_image, digest)
+        packages[img] = parse_sbom_packages(sbom)
+        print(f"  Found {len(packages[img])} packages")
+    except Exception as e:
+        print(f"  Failed to get packages for {img}:{target}: {e}")
+        raise e
     return packages
 
 
-def get_package_groups(target: str, prev_tag: str, curr_tag: str):
+def get_package_groups(image: str, prev_tag: str, curr_tag: str):
     common = set()
-    others = {k: set() for k in OTHER_NAMES.keys()}
+    others = {k: set() for k in OTHER_NAMES}
 
-    images = list(get_images())
     print(f"\nFetching current packages for {curr_tag}...")
-    npkg = get_packages(curr_tag, images)
+    npkg = get_packages(curr_tag, image)
     print(f"\nFetching previous packages for {prev_tag}...")
-    ppkg = get_packages(prev_tag, images)
+    ppkg = get_packages(prev_tag, image)
 
     keys = set(npkg.keys()) | set(ppkg.keys())
     pkg = defaultdict(set)
@@ -294,15 +297,8 @@ def get_package_groups(target: str, prev_tag: str, curr_tag: str):
     # Find other packages
     for t, other in others.items():
         first = True
-        for img, experience, image_flavor in get_images(target):
+        for img in get_images():
             if img not in pkg:
-                continue
-
-            if t == "nvidia-open" and "nvidia-open" not in image_flavor:
-                continue
-            if t == "base" and experience != "base":
-                continue
-            if t == "dx" and experience != "dx":
                 continue
 
             if first:
@@ -337,15 +333,15 @@ def calculate_changes(pkgs: list[str], prev: dict[str, str], curr: dict[str, str
     changed = []
     removed = []
 
-    blacklist_ver = set([curr.get(v, None) for v in BLACKLIST_VERSIONS])
+    blocklist_ver = {curr.get(v, None) for v in BLOCKLIST_VERSIONS}
 
     for pkg in pkgs:
         # Clearup changelog by removing mentioned packages
-        if pkg in BLACKLIST_VERSIONS:
+        if pkg in BLOCKLIST_VERSIONS:
             continue
-        if pkg in curr and curr.get(pkg, None) in blacklist_ver:
+        if pkg in curr and curr.get(pkg, None) in blocklist_ver:
             continue
-        if pkg in prev and prev.get(pkg, None) in blacklist_ver:
+        if pkg in prev and prev.get(pkg, None) in blocklist_ver:
             continue
 
         if pkg not in prev:
@@ -355,8 +351,8 @@ def calculate_changes(pkgs: list[str], prev: dict[str, str], curr: dict[str, str
         elif prev[pkg] != curr[pkg]:
             changed.append(pkg)
 
-        blacklist_ver.add(curr.get(pkg, None))
-        blacklist_ver.add(prev.get(pkg, None))
+        blocklist_ver.add(curr.get(pkg, None))
+        blocklist_ver.add(prev.get(pkg, None))
 
     out = ""
     for pkg in added:
@@ -421,16 +417,17 @@ def get_commits(prev_manifests, manifests, workdir: str):
 
 def generate_changelog(
     handwritten: str | None,
-    target: str,
+    image: str,
+    tag: str,
     pretty: str | None,
     workdir: str,
     prev_tag: str,
     curr_tag: str,
-    prev_manifests,
-    manifests,
+    prev_manifest,
+    manifest,
 ):
     common, others, curr_packages, prev_packages = get_package_groups(
-        target, prev_tag, curr_tag
+        image, prev_tag, curr_tag
     )
     versions = get_versions(curr_packages)
     prev_versions = get_versions(prev_packages)
@@ -440,14 +437,14 @@ def generate_changelog(
     if not pretty:
         # Generate pretty version since we dont have it
         try:
-            finish: str = next(iter(manifests.values()))["Labels"][
+            finish: str = next(iter(manifest.values()))["Labels"][
                 "org.opencontainers.image.revision"
             ]
         except Exception as e:
             print(f"Failed to get finish hash:\n{e}")
             finish = ""
         try:
-            linux: str = next(iter(manifests.values()))["Labels"]["ostree.linux"]
+            linux: str = next(iter(manifest.values()))["Labels"]["ostree.linux"]
             start = linux.find(".fc") + 3
             fedora_version = linux[start : start + 2]
         except Exception as e:
@@ -457,26 +454,30 @@ def generate_changelog(
         # Remove .0 from curr
         curr_pretty = re.sub(r"\.\d{1,2}$", "", curr)
         # Remove target- from curr
-        curr_pretty = re.sub(rf"^[a-z]+-|^[0-9]+-", "", curr_pretty)
+        curr_pretty = re.sub(r"^[a-z]+-|^[0-9]+-", "", curr_pretty)
         if not fedora_version + "." in curr_pretty:
             curr_pretty = fedora_version + "." + curr_pretty
-        pretty = target.capitalize()
+        pretty = tag.capitalize()
         pretty += " (F" + curr_pretty
         if finish:
             pretty += ", #" + finish[:7]
         pretty += ")"
 
-    title = CHANGELOG_TITLE.format_map(defaultdict(str, tag=curr, pretty=pretty))
+    title = CHANGELOG_TITLE.format_map(defaultdict(str, image=image, tag=curr, pretty=pretty))
 
-    changelog = CHANGELOG_FORMAT
+    if image == "veneos":
+        changelog = CHANGELOG_FORMAT_GNOME
+    elif image == "veneos-server":
+        changelog = CHANGELOG_FORMAT_SERVER
 
     changelog = (
         changelog.replace(
             "{handwritten}", handwritten if handwritten else HANDWRITTEN_PLACEHOLDER
         )
-        .replace("{target}", target)
+        .replace("{target}", tag)
         .replace("{prev}", prev)
         .replace("{curr}", curr)
+        .replace("{image}", image)
     )
 
     for pkg, v in versions.items():
@@ -491,7 +492,7 @@ def generate_changelog(
             )
 
     changes = ""
-    changes += get_commits(prev_manifests, manifests, workdir)
+    changes += get_commits(prev_manifest, manifest, workdir)
     common = calculate_changes(common, prev_versions, versions)
     if common:
         changes += COMMON_PAT.format(changes=common)
@@ -509,7 +510,8 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("target", help="Target tag")
+    parser.add_argument("image", help="Target tag")
+    parser.add_argument("tag", help="Target tag")
     parser.add_argument("output", help="Output environment file")
     parser.add_argument("changelog", help="Output changelog file")
     parser.add_argument("--pretty", help="Subject for the changelog")
@@ -519,26 +521,28 @@ def main():
 
     # Remove refs/tags, refs/heads, refs/remotes e.g.
     # Tags cannot include / anyway.
-    target = args.target.split("/")[-1]
+    image = args.image
+    tag = args.tag.split("/")[-1]
 
-    if target == "main":
-        target = "stable"
+    if tag in ["main", "latest"]:
+        tag = "stable"
 
-    manifests = get_manifests(target)
-    prev, curr = get_tags(target, manifests)
+    manifest = get_manifest(image, tag)
+    prev, curr = get_tags(tag, manifest)
     print(f"Previous tag: {prev}")
     print(f" Current tag: {curr}")
 
-    prev_manifests = get_manifests(prev)
+    prev_manifest = get_manifest(image, prev)
     title, changelog = generate_changelog(
         args.handwritten,
-        target,
+        image,
+        tag,
         args.pretty,
         args.workdir,
         prev,
         curr,
-        prev_manifests,
-        manifests,
+        prev_manifest,
+        manifest,
     )
 
     print(f"Changelog:\n# {title}\n{changelog}")
