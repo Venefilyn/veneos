@@ -2,6 +2,10 @@ on:
   workflow_call:
     inputs:
       stream_name:
+        description: "Release Name (e.g. veneos, veneos-server)"
+        type: string
+        required: true
+      stream_tag:
         description: "Release Tag (e.g. stable, testing)"
         type: string
         required: true
@@ -10,6 +14,13 @@ on:
       handwritten:
         description: "Small Changelog about changes in this build"
       stream_name:
+        description: "Release Name (e.g. veneos, veneos-server)"
+        required: true
+        type: choice
+        options:
+          - veneos
+          - veneos-server
+      stream_tag:
         description: "Release Tag (e.g. stable, testing)"
         required: true
         type: choice
@@ -28,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ${{ fromJson( inputs.stream_name ) }}
+        version: ${{ fromJson( inputs.stream_tag ) }}
 
     steps:
       - name: Checkout last 500 commits (for <commits> to work)
@@ -53,11 +64,12 @@ jobs:
       - name: Generate Release Text
         id: generate-release-text
         env:
+          IMAGE: "${{ inputs.stream_name }}"
           MATRIX_VERSION: "${{ matrix.version }}"
           HANDWRITTEN: "${{ inputs.handwritten }}"
         shell: bash
         run: |
-          just changelogs "${MATRIX_VERSION}" "${HANDWRITTEN}"
+          just changelogs "${IMAGE}" "${MATRIX_VERSION}" "${HANDWRITTEN}"
           source ./output.env
           echo "title=${TITLE}" >> $GITHUB_OUTPUT
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
