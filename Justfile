@@ -675,12 +675,12 @@ generate-build-tags $tag=default_tag $github_number="0" $base_version="":
 # Tag Images
 [group('Utility')]
 tag-images $image_name="" $tag="" tags="":
-    #!/usr/bin/bash
-    set -eou pipefail
+    #!/usr/bin/env bash
+    set -eoux pipefail
 
     # Get Image, and untag
-    IMAGE=$(${PODMAN} inspect localhost/${image_name}:${tag} --format '{{{{.Id}}')
-    ${PODMAN} untag ${IMAGE}
+    IMAGE=$(${PODMAN} inspect "localhost/${image_name}:${tag}" --format '{{{{.Id}}')
+    ${PODMAN} untag localhost/"${image_name}:${tag}"
 
     # Tag Image
     for tag in {{ tags }}; do
