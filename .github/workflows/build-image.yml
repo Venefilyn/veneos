@@ -318,11 +318,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TITLE: ${{ steps.generate-release-text.outputs.title }}
+          IMAGE: "${{ inputs.image }}"
           TAG: ${{ steps.generate-release-text.outputs.tag }}
           BODY_PATH: ./changelog.md
         run: |
           gh release create \
-          "${TAG}" \
+          "${IMAGE}:${TAG}" \
           --title "${TITLE}" \
           -F "${BODY_PATH}" \
           --latest
