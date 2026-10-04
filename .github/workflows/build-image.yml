@@ -323,7 +323,7 @@ jobs:
           BODY_PATH: ./changelog.md
         run: |
           gh release create \
-          "${IMAGE}:${TAG}" \
+          "${IMAGE}-${TAG}" \
           --title "${TITLE}" \
           -F "${BODY_PATH}" \
           --latest
