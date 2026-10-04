@@ -686,7 +686,7 @@ tag-images $image_name="" $tag="" tags="":
     done
 
     # Show Images
-    ${PODMAN} images --filter id=$IMAGE
+    ${PODMAN} images
 
 # Image Name
 [group('Utility')]
