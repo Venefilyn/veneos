@@ -710,6 +710,8 @@ push-to-registry $image_name $default_tag $tags="" registry=IMAGE_REGISTRY:
 
     for tag in $tags; do
         ${PODMAN} push "${image_name}:${tag}" "docker://{{ lowercase(registry) }}/${image_name}:${tag}"
+        # We need to push twice to workaround https://github.com/containers/podman/issues/27796
+        ${PODMAN} push "${image_name}:${tag}" "docker://{{ lowercase(registry) }}/${image_name}:${tag}"
     done
 
     digest=$(skopeo inspect docker://{{ lowercase(registry) }}/${image_name}:${default_tag} --format '{{{{.Digest}}')
