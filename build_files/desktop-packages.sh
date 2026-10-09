@@ -58,7 +58,9 @@ LAYERED_PACKAGES+=(
     @development-tools
     ansible
     nodejs
+    nodejs-corepack
     nodejs-npm
+    nodejs24
     pnpm
     yarnpkg
 )
