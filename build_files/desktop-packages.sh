@@ -57,6 +57,7 @@ LAYERED_PACKAGES=(
 LAYERED_PACKAGES+=(
     @development-tools
     ansible
+    java-latest-openjdk
     nodejs
     nodejs-corepack
     nodejs-npm
