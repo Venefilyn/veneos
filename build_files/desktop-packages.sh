@@ -64,6 +64,7 @@ LAYERED_PACKAGES+=(
     nodejs24
     pnpm
     yarnpkg
+    xxd
 )
 
 # Editors
