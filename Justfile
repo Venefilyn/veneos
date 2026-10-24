@@ -31,7 +31,7 @@ cosign-installer := "ghcr.io/sigstore/cosign/cosign:v2.4.1"
 [private]
 syft-installer := "ghcr.io/anchore/syft:v1.55.0@sha256:4cc92b64ca74ffca4c94d4c8fcc01f217731375300be14d0b6eeb2e82eaa110a"
 [private]
-oras-installer := "ghcr.io/oras-project/oras:v1.3.5@sha256:2f43a2bd4797df77ab38cf24ec92ae34a98a82cdf4ec507537e44081c603630e"
+oras-installer := "ghcr.io/oras-project/oras:v1.3.6@sha256:9cfb578be975b762fd898b9d004243d8003aeb807a3e15b2ed212cdd1326c9eb"
 [private]
 chunkah := shell("yq -r \".images[] | select(.name == \\\"chunkah\\\") | \\\"\\\\(.image)@\\\\(.digest)\\\"\" image-versions.yml")
 
