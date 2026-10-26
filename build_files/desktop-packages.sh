@@ -98,8 +98,6 @@ LAYERED_PACKAGES+=(
 dnf5 config-manager setopt terra.enabled=1 terra-extras.enabled=1
 LAYERED_PACKAGES+=(
     bun
-    devpod
-    devpod-desktop
     eza
     ghostty
     starship
@@ -123,6 +121,5 @@ log "Disable Cider Collective repo"
 dnf5 config-manager setopt cidercollective.enabled=0
 
 # Use flatpak steam with some addons instead
-# rpm-ostree override remove steam
 log "Removing Steam from Bazzite install, please use flatpak instead"
 dnf5 -y remove steam
