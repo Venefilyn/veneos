@@ -23,7 +23,3 @@ case "$BASE_IMAGE" in
   fi
   ;;
 esac
-
-# NOTE: rpm-ostree puts conf files at toplevel, when bug below is fixed we can remove
-# https://github.com/coreos/rpm-ostree/issues/5393
-rm -f /40-rpmostree-pkg-usermod*.conf || true
