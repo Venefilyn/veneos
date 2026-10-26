@@ -126,8 +126,8 @@ build $target_image=image_name $tag=default_tag:
     if [[ -v CI ]]; then
         BUILD_ARGS+=("--cpp-flag" "-DGHCI")
     fi
-    BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
-    BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
+    # BUILD_ARGS+=("--build-arg" "IMAGE_NAME=${target_image}")
+    # BUILD_ARGS+=("--build-arg" "IMAGE_VENDOR=${repo_organization}")
     BUILD_ARGS+=("--build-arg" "BASE_IMAGE=${upstream_image}")
     case "$target_image" in
     "veneos")
