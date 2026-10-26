@@ -17,13 +17,15 @@ log "Starting system cleanup"
 dnf5 clean all
 
 # Clean temporary files
-rm -rf /tmp/*
-rm -rf /var/*
+rm -rf /tmp
+rm -rf /var
+rm -rf /boot
 rm -rf /usr/etc
 # FIXME: Somehow .nvimlog is added after installing. But only when done in CI - not locally.
 rm -f /.nvimlog
 
 # Restore and setup directories
+mkdir -p /boot
 mkdir -p /tmp
 mkdir -p /var/tmp \
 && chmod -R 1777 /var/tmp
