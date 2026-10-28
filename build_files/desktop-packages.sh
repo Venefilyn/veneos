@@ -68,6 +68,7 @@ LAYERED_PACKAGES+=(
 
 # Editors
 LAYERED_PACKAGES+=(
+    emacs
     helix
     neovim
 )
