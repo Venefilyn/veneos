@@ -15,7 +15,7 @@ images:
     name: ucore-hci-stable
     image: ghcr.io/ublue-os/ucore-hci
     tag: stable
-    digest: sha256:c988c67fd790dbdfd707d70b62559125bb51d132c7147fc8832c2f70d9c4660b
+    digest: sha256:e6275ea27804266b775db7ced4387f7e3a75f630a74e9f1aa3d58c8e52a570d1
 
   - &ucore-testing
     name: ucore-hci-testing
